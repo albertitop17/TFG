@@ -4,8 +4,8 @@ import pygame
 pygame.init()
 
 # Configurar la pantalla
-ancho, alto = 0, 0 #ponerlo en ingles en el real
-
+#ancho, alto = 0, 0 #ponerlo en ingles en el real
+#podria definir un fichero a parte para las constantes
 #quiero que salga a mitad de pantalla
 
 pantall = pygame.display.Info()
