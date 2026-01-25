@@ -22,3 +22,4 @@ while run:
         if evento.type == pygame.QUIT: #si se cierra la ventana (o alt+F4)
             run = False
 
+print("lechu calvo")
