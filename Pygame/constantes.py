@@ -1,3 +1,6 @@
 ancho_ventana = 100
 alto_ventana = 100
-print('hola')
+
+alto_personaje = 50
+ancho_personaje = 50
+#tambien podria definir colores aqui

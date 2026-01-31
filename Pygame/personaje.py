@@ -1,8 +1,9 @@
 import pygame
+import constantes
 
 class Personaje:
-    def __init__(self, x, y, ancho, alto, color):
-        self.forma = pygame.Rect(x, y, ancho, alto)
+    def __init__(self, x, y, color):
+        self.forma = pygame.Rect(x, y, constantes.ancho_personaje, constantes.alto_personaje)
         #otra opcion seria definirlo en el (0,0) y luego moverlo a x,y
         #self.forma.topleft = (x, y)
         #set.forma.center = (x, y)  #para centrarlo en x,y

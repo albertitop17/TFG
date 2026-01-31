@@ -1,6 +1,11 @@
 import os
 import pygame
 import constantes
+from personaje import Personaje 
+
+
+
+jugador = Personaje(x = 500, y = 100, color = (0, 200, 255))
 
 
 # 1. Centrar la ventana (esto debe ir ANTES de pygame.init o set_mode)
@@ -14,6 +19,7 @@ pygame.init()
 #ancho, alto = 0, 0 #ponerlo en ingles en el real
 #podria definir un fichero a parte para las constantes
 
+#se puede hacer con fullscreen tambien
 pantall = pygame.display.Info()
 x = (pantall.current_w -constantes.ancho_ventana) 
 y = (pantall.current_h-constantes.alto_ventana) 
@@ -24,6 +30,10 @@ pygame.display.set_caption("Mi primer juego") #titulo de la ventana
 
 run = True
 while run:
+
+    jugador.dibujar(pantalla)
+
     for evento in pygame.event.get(): #registrar eventos que ocurren en el juego
         if evento.type == pygame.QUIT: #si se cierra la ventana (o alt+F4)
             run = False
+    pygame.display.update() #actualizar la pantalla
