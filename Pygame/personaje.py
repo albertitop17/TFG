@@ -22,6 +22,6 @@ class Personaje:
     def dibujar(self, interfaz): #donde lo queremos dibujar, no hace falta que sea la misma ventana 
         pygame.draw.rect(interfaz, self.color, self.forma)
 
-    def mover(self, dx, dy):
+    def movimiento(self, dx, dy):
         self.forma.x += dx
         self.forma.y += dy
