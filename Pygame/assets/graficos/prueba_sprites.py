@@ -1,7 +1,6 @@
 import pygame
-
 # --- CONFIGURACIÓN ---
-NOMBRE_IMAGEN = "sheet_pacman_personajes.png"
+NOMBRE_IMAGEN = "Pygame//assets//graficos//sheet_pacman_personajes.png"
 ANCHO_SPRITE = 16   # Tamaño estándar de Pacman (suelen ser 16x16)
 ALTO_SPRITE = 16
 ESCALA = 3          # Zoom para verlo mejor en pantalla (3x)
