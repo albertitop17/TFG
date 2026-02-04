@@ -9,3 +9,5 @@ color_fondo = (0, 0, 100)
 
 velocidad = 15
 FPS = 60
+
+escala_personaje = 0.9

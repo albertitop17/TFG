@@ -1,19 +1,18 @@
 import os
 import pygame
-import constantes
-from personaje import Personaje 
+from src import constantes
+from src.personaje import Personaje 
+
+# Inicializar Pygame------------------------------------
+pygame.init()
 
 
-
-jugador = Personaje(x = 500, y = 100, color = (0, 200, 255))
+#crear la ventana del juego-------------------------------
 
 
 # 1. Centrar la ventana (esto debe ir ANTES de pygame.init o set_mode)
 #os.environ['SDL_VIDEO_CENTERED'] = '1'
 
-
-# Inicializar Pygame
-pygame.init()
 
 # Configurar la pantalla
 #ancho, alto = 0, 0 #ponerlo en ingles en el real
@@ -27,6 +26,16 @@ y = (pantall.current_h-constantes.alto_ventana)
 pantalla = pygame.display.set_mode((x, y))
 
 pygame.display.set_caption("Mi primer juego") #titulo de la ventana
+
+
+
+# Crear el jugador--------------------------------------------------
+
+#cargar la imagen del jugador (el convert_alpha es para que reconozca la transparencia)
+img_jugador = pygame.image.load("Pygame//assets//graficos//sheet_pacman_personajes.png").convert_alpha()
+img_jugador = pygame.transform.scale(img_jugador, (int(constantes.ancho_personaje*constantes.escala_personaje), int(constantes.alto_personaje*constantes.escala_personaje)))
+
+jugador = Personaje(x = 500, y = 100, color = (0, 200, 255), imagen = img_jugador)
 
 
 #defino las variables de movimiento del personaje
