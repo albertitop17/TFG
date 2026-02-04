@@ -32,10 +32,10 @@ pygame.display.set_caption("Mi primer juego") #titulo de la ventana
 # Crear el jugador--------------------------------------------------
 
 #cargar la imagen del jugador (el convert_alpha es para que reconozca la transparencia)
-img_jugador = pygame.image.load("Pygame//assets//graficos//sheet_pacman_personajes.png").convert_alpha()
-img_jugador = pygame.transform.scale(img_jugador, (int(constantes.ancho_personaje*constantes.escala_personaje), int(constantes.alto_personaje*constantes.escala_personaje)))
+img_entera = pygame.image.load("Pygame//assets//graficos//sheet_pacman_personajes.png").convert_alpha()
+#img_jugador = pygame.transform.scale(img_jugador, (int(constantes.ancho_personaje*constantes.escala_personaje), int(constantes.alto_personaje*constantes.escala_personaje)))
 
-jugador = Personaje(x = 500, y = 100, color = (0, 200, 255), imagen = img_jugador)
+jugador = Personaje(x = 500, y = 100, imagen_entera = img_entera) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
 
 
 #defino las variables de movimiento del personaje

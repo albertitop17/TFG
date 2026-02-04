@@ -5,12 +5,12 @@ alto_personaje = 50
 ancho_personaje = 50
 #tambien podria definir colores aqui
 
-color_fondo = (0, 0, 100)
+color_fondo = (0, 0, 0)
 
 velocidad = 15
 FPS = 60
 
-escala_personaje = 0.9
+escala_personaje = 1.5
 
 # DICCIONARIO DE ANIMACIONES
 # Formato: 'clave': [(x, y, ancho, alto), (x, y, ancho, alto)...]
@@ -18,7 +18,7 @@ escala_personaje = 0.9
 PACMAN_COORDENADAS = {
     'quieto': [(0, 0, 16, 16)], 
     'derecha': [ 
-        (17, 0, 16, 16), #medio abierta dr
+        (18, 0, 15, 16), #medio abierta dr
         (0, 0, 16, 16), #muy abierta dr
         (17, 0, 16, 16), #medio abierta dr
         (34, 0, 16, 16) #cerrada 
