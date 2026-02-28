@@ -20,8 +20,8 @@ pygame.init()
 
 #se puede hacer con fullscreen tambien
 pantall = pygame.display.Info()
-x = (pantall.current_w -constantes.ancho_ventana) 
-y = (pantall.current_h-constantes.alto_ventana) 
+x = constantes.ancho_ventana 
+y = constantes.alto_ventana 
 
 pantalla = pygame.display.set_mode((x, y))
 
@@ -32,10 +32,13 @@ pygame.display.set_caption("Mi primer juego") #titulo de la ventana
 # Crear el jugador--------------------------------------------------
 
 #cargar la imagen del jugador (el convert_alpha es para que reconozca la transparencia)
-img_entera = pygame.image.load("Pygame//assets//graficos//sheet_pacman_personajes.png").convert_alpha()
+sprite = pygame.image.load("Pygame//assets//graficos//sheet_pacman_personajes.png").convert_alpha()
 #img_jugador = pygame.transform.scale(img_jugador, (int(constantes.ancho_personaje*constantes.escala_personaje), int(constantes.alto_personaje*constantes.escala_personaje)))
 
-jugador = Personaje(x = 500, y = 100, imagen_entera = img_entera) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
+
+
+jugador = Personaje(x = 500, y = 100, imagen_entera = sprite) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
+
 
 
 #defino las variables de movimiento del personaje
@@ -69,7 +72,9 @@ while run:
         dy = constantes.velocidad
 
     #para mover al jugador
-    jugador.movimiento(dx, dy)
+    jugador.movimiento(dx, dy, x, y)
+
+    jugador.actualizar_animacion() #actualizar la animacion del jugador segun su direccion de movimiento
 
     jugador.dibujar(pantalla)
 
@@ -95,6 +100,8 @@ while run:
                 mover_arriba = False
             if evento.key == pygame.K_DOWN or evento.key == pygame.K_s: #si la tecla es la flecha abajo
                 mover_abajo = False
+
+
 
     pygame.display.update() #actualizar la pantalla
 

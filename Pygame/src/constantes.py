@@ -1,5 +1,5 @@
-ancho_ventana = 100
-alto_ventana = 100
+ancho_ventana = 1200
+alto_ventana = 600
 
 alto_personaje = 50
 ancho_personaje = 50
@@ -7,10 +7,10 @@ ancho_personaje = 50
 
 color_fondo = (0, 0, 0)
 
-velocidad = 15
+velocidad = 10
 FPS = 60
 
-escala_personaje = 1.5
+escala_personaje = 3
 
 # DICCIONARIO DE ANIMACIONES
 # Formato: 'clave': [(x, y, ancho, alto), (x, y, ancho, alto)...]
@@ -19,9 +19,9 @@ PACMAN_COORDENADAS = {
     'quieto': [(0, 0, 16, 16)], 
     'derecha': [ 
         (18, 0, 15, 16), #medio abierta dr
-        (0, 0, 16, 16), #muy abierta dr
-        (17, 0, 16, 16), #medio abierta dr
-        (34, 0, 16, 16) #cerrada 
+        (1, 0, 15, 16), #muy abierta dr
+        (18, 0, 15, 16), #medio abierta dr
+        (35, 0, 15, 16) #cerrada 
     ],
     'izquierda': [
         (17, 17, 16, 16), # medio abierta iz
