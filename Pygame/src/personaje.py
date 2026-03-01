@@ -44,7 +44,8 @@ class Personaje:
         #    interfaz.blit(self.imagen, self.forma) #dibujar la imagen del personaje en la posicion y tamaño del rectangulo
         #pygame.draw.rect(interfaz, self.color, self.forma, width=1)
 
-    def movimiento(self, dx, dy, x, y):
+    def movimiento(self, dx, dy, dimensiones): #dx y dy son la cantidad de movimiento en x e y respectivamente, x e y son el ancho y alto de la ventana para controlar los limites
+        x, y = dimensiones
         if dx == 0 and dy == 0: #para que mantenga la orientacion cuando no se mueve
             return
         elif dx < 0:
@@ -58,17 +59,17 @@ class Personaje:
         self.forma.x += dx
         self.forma.y += dy
 
-        # Asegurarse de que el personaje salga de los límites de la ventana y entre por el lado opuesto
+        # Asegurarse de que el personaje al salirse de los límites de la ventana entre por el lado opuesto
         if self.forma.left < 0: #si el personaje se sale por la izquierda
-            self.forma.right = x 
+            self.forma.right = dimensiones[0] 
 
-        if self.forma.right > x: #si el personaje se sale por la derecha
+        if self.forma.right > dimensiones[0]: #si el personaje se sale por la derecha
             self.forma.left = 0
 
         if self.forma.top < 0: #si el personaje se sale por arriba
-            self.forma.bottom = y
+            self.forma.bottom = dimensiones[1]
 
-        if self.forma.bottom > y: #si el personaje se sale por abajo
+        if self.forma.bottom > dimensiones[1]: #si el personaje se sale por abajo
             self.forma.top = 0
 
         
