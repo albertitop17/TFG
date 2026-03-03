@@ -18,11 +18,11 @@ class Personaje:
         self.controlador = controlador
     
 
-    def actualizar(self, dimensiones):
+    def actualizar(self, dimensiones, muros):
         # 1. El cerebro decide el movimiento
         dx, dy = self.controlador.obtener_movimiento()
         # 2. El cuerpo ejecuta el movimiento
-        self.movimiento(dx, dy, dimensiones)
+        self.movimiento(dx, dy, dimensiones, muros)
         # 3. Actualizamos la animación
         self.actualizar_animacion()
 
@@ -40,12 +40,12 @@ class Personaje:
         
 
     def dibujar(self, interfaz): #donde lo queremos dibujar, no hace falta que sea la misma ventana 
-      
+        pygame.draw.rect(interfaz, (255, 0, 0), self.forma, 2) #hitbox del personaje
         imagen_dr = pygame.transform.rotate(self.imagen, self.rotate)
         interfaz.blit(imagen_dr, self.forma) #dibujar la imagen del personaje en la posicion y tamaño del rectangulo
 
 
-    def movimiento(self, dx, dy, dimensiones): #dx y dy son la cantidad de movimiento en x e y respectivamente, x e y son el ancho y alto de la ventana para controlar los limites
+    def movimiento(self, dx, dy, dimensiones, muros): #dx y dy son la cantidad de movimiento en x e y respectivamente, x e y son el ancho y alto de la ventana para controlar los limites
         x, y = dimensiones
         if dx == 0 and dy == 0: #para que mantenga la orientacion cuando no se mueve
             return
@@ -58,8 +58,29 @@ class Personaje:
         else:
             self.rotate = 270
 
+        #tratamos los ejes por separado para que el personaje pueda deslizarse por las paredes en lugar de quedarse atascado
+
+        #movimiento con colisiones en el eje x
         self.forma.x += dx
+        for muro in self.muros:
+            if self.forma.colliderect(muro): # Si choco con un muro...
+                if dx > 0: # Si iba a la derecha, me pego a su lado izquierdo
+                    self.forma.right = muro.left
+                elif dx < 0: # Si iba a la izquierda, me pego a su lado derecho
+                    self.forma.left = muro.right
+
+        #movimiento con colisiones en el eje y
         self.forma.y += dy
+        for muro in self.muros:
+            if self.forma.colliderect(muro):
+                if dy > 0: # Si iba hacia abajo, me pego a su techo
+                    self.forma.bottom = muro.top
+                elif dy < 0: # Si iba hacia arriba, me pego a su suelo
+                    self.forma.top = muro.bottom
+
+
+
+
 
         # Asegurarse de que el personaje al salirse de los límites de la ventana entre por el lado opuesto
         if self.forma.left < 0: #si el personaje se sale por la izquierda

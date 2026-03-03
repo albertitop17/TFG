@@ -2,6 +2,8 @@ import pygame
 from src import constantes
 from src.personaje import Personaje 
 from src.controladores import Humano, IA
+from src.mapa import Mapa 
+
 class Game:
     def __init__(self):
         
@@ -16,9 +18,11 @@ class Game:
 
         # Creamos el mapa y los jugadores --------------------------------------------------
         sprite = pygame.image.load("assets//graficos//sheet_pacman_personajes.png").convert_alpha()
-       
+        self.mapa = Mapa() #crear el mapa 
+
+
         cerebro = Humano() #aqui se puede cambiar el controlador del personaje
-        self.jugador = Personaje(x = 500, y = 100, imagen_entera = sprite, controlador = cerebro) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
+        self.jugador = Personaje(x = 50, y = 50, imagen_entera = sprite, controlador = cerebro) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
 
     def eventos(self):
         for evento in pygame.event.get(): #registrar eventos que ocurren en el juego
@@ -33,10 +37,12 @@ class Game:
     def update(self):
         #actualizamos el movimiento (le decimos que lo tiene que hacer, el cómo lo sabrá el)
         dimensiones = (constantes.ancho_ventana , constantes.alto_ventana)
-        self.jugador.actualizar(dimensiones)
+        self.jugador.actualizar(dimensiones, self.mapa.muros) #actualizar el jugador, le pasamos las dimensiones de la ventana para controlar los limites del movimiento y los muros para controlar las colisiones
 
     def dibujar(self):
         self.pantalla.fill(constantes.color_fondo) #pintar el fondo de la pantalla
+
+        self.mapa.dibujar(self.pantalla) #dibujar el mapa
         self.jugador.dibujar(self.pantalla)
         pygame.display.update() #actualizar la pantalla para mostrar los cambios
 

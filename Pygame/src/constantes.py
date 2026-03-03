@@ -1,16 +1,16 @@
 ancho_ventana = 1200
 alto_ventana = 600
 
-alto_personaje = 50
-ancho_personaje = 50
+alto_personaje = 30
+ancho_personaje = 30
 #tambien podria definir colores aqui
 
 color_fondo = (0, 0, 0)
 
-velocidad = 10
+velocidad = 5
 FPS = 60
 
-escala_personaje = 3
+escala_personaje = 2
 
 # DICCIONARIO DE ANIMACIONES
 # Formato: 'clave': [(x, y, ancho, alto), (x, y, ancho, alto)...]
@@ -18,11 +18,15 @@ escala_personaje = 3
 PACMAN_COORDENADAS = {
     'quieto': [(0, 0, 16, 16)], 
     'derecha': [ 
-        (18, 0, 15, 16), #medio abierta dr
-        (1, 0, 15, 16), #muy abierta dr
-        (18, 0, 15, 16), #medio abierta dr
-        (35, 0, 15, 16) #cerrada 
-    ],
+        (18, 0, 15, 15), #medio abierta dr
+        (1, 0, 15, 15), #muy abierta dr
+        (18, 0, 15, 15), #medio abierta dr
+        (35, 0, 15, 15) #cerrada 
+    ]
+}
+
+"""
+    ,
     'izquierda': [
         (17, 17, 16, 16), # medio abierta iz
         (0, 17, 16, 16), # muy abierta iz
@@ -41,4 +45,8 @@ PACMAN_COORDENADAS = {
         (17, 51, 16, 16), # medio abierta ab
         (34, 0, 16, 16) # cerrada
     ]
-}
+    """
+
+#MAPA
+
+celda = 50
