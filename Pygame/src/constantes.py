@@ -1,16 +1,16 @@
 ancho_ventana = 1200
 alto_ventana = 600
 
-alto_personaje = 30
-ancho_personaje = 30
+alto_personaje = 50
+ancho_personaje = 50
 #tambien podria definir colores aqui
 
 color_fondo = (0, 0, 0)
 
-velocidad = 5
+velocidad = 10/3
 FPS = 60
 
-escala_personaje = 2
+escala_personaje = 10/3
 
 # DICCIONARIO DE ANIMACIONES
 # Formato: 'clave': [(x, y, ancho, alto), (x, y, ancho, alto)...]

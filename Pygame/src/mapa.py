@@ -9,7 +9,7 @@ MAPA = [
     "101111011101101110111101",
     "100000000000000000000001",
     "101111010111111010111101",
-    "100000010001100010000001",
+    "000000010001100010000000",
     "111111011101101110111111",
     "000001010000000010100000",
     "111111010111111010111111",
@@ -38,7 +38,7 @@ class Mapa:
                     self.muros.append(rect_muro)
 
     def dibujar(self, pantalla):
-        # Dibujamos cada muro de color azul
+        # Dibujamos cada muro de color azul (luego pondré directamente el sprite)
         color_muro = (33, 33, 255) 
         for muro in self.muros:
             pygame.draw.rect(pantalla, color_muro, muro)

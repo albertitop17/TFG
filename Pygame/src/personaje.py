@@ -62,8 +62,8 @@ class Personaje:
 
         #movimiento con colisiones en el eje x
         self.forma.x += dx
-        for muro in self.muros:
-            if self.forma.colliderect(muro): # Si choco con un muro...
+        for muro in muros:
+            if self.forma.colliderect(muro): # Si choco con un muro
                 if dx > 0: # Si iba a la derecha, me pego a su lado izquierdo
                     self.forma.right = muro.left
                 elif dx < 0: # Si iba a la izquierda, me pego a su lado derecho
@@ -71,7 +71,7 @@ class Personaje:
 
         #movimiento con colisiones en el eje y
         self.forma.y += dy
-        for muro in self.muros:
+        for muro in muros:
             if self.forma.colliderect(muro):
                 if dy > 0: # Si iba hacia abajo, me pego a su techo
                     self.forma.bottom = muro.top
