@@ -10,7 +10,7 @@ MAPA = [
     "100000000000000000000001",
     "101111010111111010111101",
     "000000010001100010000000",
-    "111111011101101110111111",
+    "111111011101101110111011",
     "000001010000000010100000",
     "111111010111111010111111",
     "100000000001100000000001",
@@ -20,7 +20,7 @@ MAPA = [
 class Mapa:
     def __init__(self):
         self.matriz = MAPA
-        self.tamano_celda = constantes.celda # 50 píxeles por celda (igual que el personaje)
+        self.tamano_celda = constantes.tamano_celda # 50 píxeles por celda (igual que el personaje)
         self.muros = [] # Aquí guardaremos los rectángulos de las paredes
         self.construir_mapa()
 

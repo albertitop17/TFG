@@ -28,6 +28,6 @@ class Humano:
 class IA:
     def obtener_movimiento(self):
         #aqui va la logica de movimiento de la IA
-        dx = 0
+        dx = 0  
         dy = 0
         return dx, dy

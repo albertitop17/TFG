@@ -7,7 +7,7 @@ ancho_personaje = 50
 
 color_fondo = (0, 0, 0)
 
-velocidad = 10/3
+velocidad = 10/3 
 FPS = 60
 
 escala_personaje = 10/3
@@ -49,4 +49,6 @@ PACMAN_COORDENADAS = {
 
 #MAPA
 
-celda = 50
+#multiplo de la velocidad para que el personaje pueda alinearse perfectamente con las paredes al girar, sino se quedaría atascado al intentar girar justo antes de un muro.
+#Además, es el mismo tamaño que el personaje para que encaje perfectamente en las celdas del mapa.
+tamano_celda = 50 
