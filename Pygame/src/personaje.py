@@ -24,7 +24,7 @@ class Personaje:
 
     def actualizar(self, dimensiones, muros):
         # 1. El cerebro decide el movimiento
-        dx_deseada, dy_deseada = self.controlador.obtener_movimiento()
+        dx_deseada, dy_deseada = self.controlador.obtener_movimiento(self.forma, muros) #le pasamos la forma del personaje y los muros para que el controlador pueda tomar decisiones informadas sobre el movimiento (por ejemplo, para la IA)
         # 2. Comprobamos si el movimiento deseado es posible 
         self.gestionar_movimiento(dx_deseada, dy_deseada, dimensiones, muros)
         # 3. Movemos al personaje según el movimiento permitido

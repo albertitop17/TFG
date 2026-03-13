@@ -1,7 +1,7 @@
 import pygame
 from src import constantes
 from src.personaje import Personaje 
-from src.controladores import Humano, IA
+from src.controladores import ControladorFantasmaAleatorio, Humano, IA
 from src.mapa import Mapa 
 
 class Game:
@@ -23,6 +23,8 @@ class Game:
 
         cerebro = Humano() #aqui se puede cambiar el controlador del personaje
         self.jugador = Personaje(x = 50, y = 50, imagen_entera = sprite, controlador = cerebro) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
+        cerebro_fantasma = ControladorFantasmaAleatorio()
+        self.fantasma = Personaje(x = 250, y = 500, imagen_entera = sprite, controlador = cerebro_fantasma) # Le ponemos la misma imagen temporalmente hasta que tengas sprites de fantasmas
 
     def eventos(self):
         for evento in pygame.event.get(): #registrar eventos que ocurren en el juego
@@ -38,12 +40,15 @@ class Game:
         #actualizamos el movimiento (le decimos que lo tiene que hacer, el cómo lo sabrá el)
         dimensiones = (constantes.ancho_ventana , constantes.alto_ventana)
         self.jugador.actualizar(dimensiones, self.mapa.muros) #actualizar el jugador, le pasamos las dimensiones de la ventana para controlar los limites del movimiento y los muros para controlar las colisiones
+        self.fantasma.actualizar(dimensiones, self.mapa.muros) # Actualizamos al fantasma
 
     def dibujar(self):
         self.pantalla.fill(constantes.color_fondo) #pintar el fondo de la pantalla
-
         self.mapa.dibujar(self.pantalla) #dibujar el mapa
+
         self.jugador.dibujar(self.pantalla)
+        self.fantasma.dibujar(self.pantalla)
+
         pygame.display.update() #actualizar la pantalla para mostrar los cambios
 
     def run_game(self):

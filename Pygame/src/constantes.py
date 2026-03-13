@@ -7,7 +7,7 @@ ancho_personaje = 50
 
 color_fondo = (0, 0, 0)
 
-velocidad = 10/3 
+velocidad = 5 
 FPS = 60
 
 escala_personaje = 10/3
@@ -46,6 +46,10 @@ PACMAN_COORDENADAS = {
         (34, 0, 16, 16) # cerrada
     ]
     """
+
+FANTASMA_COORDENADAS = {
+    'rojo': [(1, 68, 15, 15), (18, 68, 15, 15),(1, 68, 15, 15), (18, 68, 15, 15)]}
+
 
 #MAPA
 
