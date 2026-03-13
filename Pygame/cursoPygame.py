@@ -1,6 +1,7 @@
 import pygame
 from src import constantes
-from src.personaje import Personaje 
+from src.pacman import Pacman
+from src.fantasma import Fantasma
 from src.controladores import ControladorFantasmaAleatorio, Humano, IA
 from src.mapa import Mapa 
 
@@ -22,9 +23,9 @@ class Game:
 
 
         cerebro = Humano() #aqui se puede cambiar el controlador del personaje
-        self.jugador = Personaje(x = 50, y = 50, imagen_entera = sprite, controlador = cerebro) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
+        self.jugador = Pacman(x = 50, y = 50, imagen_entera = sprite, controlador = cerebro) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
         cerebro_fantasma = ControladorFantasmaAleatorio()
-        self.fantasma = Personaje(x = 250, y = 500, imagen_entera = sprite, controlador = cerebro_fantasma) # Le ponemos la misma imagen temporalmente hasta que tengas sprites de fantasmas
+        self.fantasma = Fantasma(x = 250, y = 500, imagen_entera = sprite, controlador = cerebro_fantasma, color = 'azul') # Le ponemos la misma imagen temporalmente hasta que tengas sprites de fantasmas
 
     def eventos(self):
         for evento in pygame.event.get(): #registrar eventos que ocurren en el juego
