@@ -58,5 +58,26 @@ class Fantasma(EnteFisico):
         self.imagen = escalar_imagen(imagen_recortada, constantes.escala_personaje)
 
     def dibujar(self, interfaz): #donde lo queremos dibujar, no hace falta que sea la misma ventana
-        pygame.draw.rect(interfaz, (255, 0, 0), self.forma, 2) #hitbox del personaje NO ES NECESARIO!!
+        #pygame.draw.rect(interfaz, (255, 0, 0), self.forma, 2) #hitbox del personaje NO ES NECESARIO!!
         interfaz.blit(self.imagen, self.forma) #dibujar la imagen del personaje en la posicion y tamaño del rectangulo
+        # --- MODO DEBUG PARA EL TFG ---
+        # Si el controlador tiene la variable objetivo_debug y no está vacía...
+        if hasattr(self.controlador, 'objetivo_debug') and self.controlador.objetivo_debug:
+            
+            # 2. Dibujamos el "Vector de Puntería" (Línea desde el fantasma hasta Pac-Man)
+            # Usamos el color de este fantasma para la línea (ej. Rojo)
+            color_linea = (255, 0, 0) if self.color == 'rojo' else (255, 184, 255)
+            
+            pygame.draw.line(
+                interfaz, 
+                color_linea, 
+                self.forma.center, # Desde el centro del fantasma
+                self.controlador.objetivo_debug, # Hasta el centro de Pac-Man
+                2 # Grosor de la línea
+            )
+
+            # 3. (Opcional) Dibujar un punto que indique hacia dónde está intentando empujar la IA
+            # Proyectamos un punto en la dirección en la que se mueve
+            punto_futuro_x = self.forma.centerx + (self.dx * 10)
+            punto_futuro_y = self.forma.centery + (self.dy * 10)
+            pygame.draw.circle(interfaz, (0, 255, 0), (punto_futuro_x, punto_futuro_y), 5)

@@ -2,7 +2,7 @@ import pygame
 from src import constantes
 from src.pacman import Pacman
 from src.fantasma import Fantasma
-from src.controladores import ControladorFantasmaAleatorio, Humano, IA, CerebroBlinky
+from src.controladores import ControladorFantasmaAleatorio, Humano, IA, CerebroBlinky, CerebroBlinky2
 from src.mapa import Mapa 
 
 class Game:
@@ -31,7 +31,7 @@ class Game:
         cerebro_rosa = ControladorFantasmaAleatorio()
         self.fantasma_rosa = Fantasma(x = 350, y = 500, imagen_entera = sprite, controlador = cerebro_rosa, color = 'rosa') 
 
-        cerebro_azul = ControladorFantasmaAleatorio()
+        cerebro_azul = CerebroBlinky2()
         self.fantasma_azul = Fantasma(x = 450, y = 500, imagen_entera = sprite, controlador = cerebro_azul, color = 'azul') 
 
         cerebro_naranja = ControladorFantasmaAleatorio()
@@ -53,7 +53,7 @@ class Game:
         self.jugador.actualizar(dimensiones, self.mapa.muros) #actualizar el jugador, le pasamos las dimensiones de la ventana para controlar los limites del movimiento y los muros para controlar las colisiones
         self.fantasma_rojo.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador.forma) # Actualizamos al fantasma. Le pasamos 'self.jugador.forma' como objetivo para que Blinky sepa donde estamos
         self.fantasma_rosa.actualizar(dimensiones, self.mapa.muros) 
-        self.fantasma_azul.actualizar(dimensiones, self.mapa.muros) 
+        self.fantasma_azul.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador.forma) # Actualizamos al fantasma. Le pasamos 'self.jugador.forma' como objetivo para que Inky sepa donde estamos
         self.fantasma_naranja.actualizar(dimensiones, self.mapa.muros)
 
     def dibujar(self):
