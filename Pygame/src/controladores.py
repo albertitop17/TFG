@@ -8,7 +8,7 @@ class Humano:
         self.dx = 0
         self.dy = 0
 
-    def obtener_movimiento(self, _ ,__):
+    def obtener_movimiento(self, _ ,__,___):
         
         teclas = pygame.key.get_pressed() #obtener el estado de todas las teclas
         if teclas[pygame.K_LEFT]: #si la tecla de flecha izquierda está presionada
@@ -39,7 +39,7 @@ class ControladorFantasmaAleatorio:
         self.dx = constantes.velocidad
         self.dy = 0
 
-    def obtener_movimiento(self, rect_actual, muros):
+    def obtener_movimiento(self, rect_actual, muros, objetivo=None):
         # 1. MAGIA MATEMÁTICA: ¿Estamos en un "Nodo" (intersección)?
         # Si nuestra posición no es múltiplo del tamaño de celda, estamos a mitad de un pasillo.
         # Por tanto, no tomamos decisiones, seguimos rectos.
@@ -82,6 +82,78 @@ class ControladorFantasmaAleatorio:
             self.dx, self.dy = random.choice(direcciones_validas)
         else:
             # Seguridad: Si el fantasma entra en un callejón sin salida, le dejamos dar la vuelta
+            self.dx *= -1
+            self.dy *= -1
+
+        return self.dx, self.dy
+
+
+
+
+class CerebroBlinky:
+    def __init__(self):
+        # Blinky suele empezar moviéndose hacia la izquierda al salir de la caja
+        self.dx = -constantes.velocidad
+        self.dy = 0
+
+    def obtener_movimiento(self, rect_actual, muros, objetivo=None):
+        # Miramos primero si estamos en un cruce (nodo) para tomar decisiones. Si no, seguimos rectos.
+        if rect_actual.x % constantes.tamano_celda != 0 or rect_actual.y % constantes.tamano_celda != 0:
+            return self.dx, self.dy
+
+        # Si por algún motivo no hay objetivo (Pac-Man ha muerto, etc.), seguimos rectos
+        if not objetivo:
+            return self.dx, self.dy
+
+        # Tenemos 4 direcciones posibles
+        direcciones_posibles = [
+            (0, -constantes.velocidad),   # Arriba
+            (-constantes.velocidad, 0),   # Izquierda
+            (0, constantes.velocidad),    # Abajo
+            (constantes.velocidad, 0)     # Derecha
+        ]
+
+        direcciones_validas = []
+
+        # Comprobamos qué caminos no tienen pared
+        for dir_x, dir_y in direcciones_posibles:
+            # REGLA PAC-MAN: Los fantasmas no pueden dar la vuelta 180º
+            if dir_x == -self.dx and dir_y == -self.dy and (self.dx != 0 or self.dy != 0):
+                continue 
+
+            rect_prueba = rect_actual.copy()
+            rect_prueba.x += dir_x
+            rect_prueba.y += dir_y
+
+            colisiona = False
+            for muro in muros:
+                if rect_prueba.colliderect(muro):
+                    colisiona = True
+                    break
+
+            if not colisiona:
+                direcciones_validas.append((dir_x, dir_y))
+
+        # IA DE BLINKY: Elegir el camino que minimice la distancia a Pac-Man
+        if direcciones_validas:
+            mejor_direccion = direcciones_validas[0]
+            menor_distancia = float('inf')
+
+            for dir_x, dir_y in direcciones_validas:
+                # Calculamos nuestra futura posición si tomamos este camino
+                futuro_x = rect_actual.x + dir_x
+                futuro_y = rect_actual.y + dir_y
+                
+                # MATEMÁTICAS: Distancia Euclidiana al Cuadrado hacia Pac-Man
+                dist_cuadrada = (objetivo.centerx - futuro_x)**2 + (objetivo.centery - futuro_y)**2
+                
+                if dist_cuadrada < menor_distancia:
+                    menor_distancia = dist_cuadrada
+                    mejor_direccion = (dir_x, dir_y)
+
+            self.dx, self.dy = mejor_direccion
+        else:
+            # Si se mete en un callejón sin salida (no debería pasar en un mapa de Pac-Man normal)
             self.dx *= -1
             self.dy *= -1
 
