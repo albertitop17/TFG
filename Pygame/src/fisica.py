@@ -1,6 +1,21 @@
 import pygame
 from src import constantes
 
+def camino_esta_libre(rect_actual, dx, dy, muros):
+    """
+    Simula un paso en la dirección dx, dy y devuelve True si el camino está libre,
+    o False si colisiona con algún muro.
+    """
+    rect_prueba = rect_actual.copy()
+    rect_prueba.x += dx
+    rect_prueba.y += dy
+
+    for muro in muros:
+        if rect_prueba.colliderect(muro):
+            return False # Chocó, el camino no está libre
+            
+    return True
+
 
 class EnteFisico:
     def __init__(self, x, y, controlador): #poner en imagen predeterminada las coordenadas del sprite del personaje en la hoja de sprites?
@@ -63,20 +78,11 @@ class EnteFisico:
                 self.forma.y += (constantes.tamano_celda - resto_y) # Nos empuja abajo
 
         # Ahora que (quizás) estamos perfectamente alineados, probamos el rectángulo
-        rect_prueba = self.forma.copy()
-        rect_prueba.x += deseado_x
-        rect_prueba.y += deseado_y
-
-        colisiona = False
-        for muro in muros:
-            if rect_prueba.colliderect(muro):
-                colisiona = True
-                break
-            
-        if not colisiona: #Confirmamos el giro
+        if camino_esta_libre(self.forma, deseado_x, deseado_y, muros): #Confirmamos el giro
             self.dx = deseado_x
             self.dy = deseado_y
-        else:# Si a pesar de alinearnos sigue habiendo muro, deshacemos el empujón magnético
+        else:
+            # Si a pesar de alinearnos sigue habiendo muro, deshacemos el empujón magnético
             self.forma.x = pos_x_original
             self.forma.y = pos_y_original
 
@@ -84,34 +90,34 @@ class EnteFisico:
 
     def movimiento(self, dimensiones, muros):
         #tratamos los ejes por separado para que el personaje pueda deslizarse por las paredes en lugar de quedarse atascado
-            #movimiento con colisiones en el eje x
-            self.forma.x += self.dx
-            for muro in muros:
-                if self.forma.colliderect(muro): # Si choco con un muro
-                    if self.dx > 0: # Si iba a la derecha, me pego a su lado izquierdo
-                        self.forma.right = muro.left
-                    elif self.dx < 0: # Si iba a la izquierda, me pego a su lado derecho
-                        self.forma.left = muro.right
-                    self.dx = 0 # Si choco con un muro, la velocidad se anula
-            #movimiento con colisiones en el eje y
-            self.forma.y += self.dy
-            for muro in muros:
-                if self.forma.colliderect(muro):
-                    if self.dy > 0: # Si iba hacia abajo, me pego a su techo
-                        self.forma.bottom = muro.top
-                    elif self.dy < 0: # Si iba hacia arriba, me pego a su suelo
-                        self.forma.top = muro.bottom
-                    self.dy = 0 # Si choco con un muro, la velocidad se anula
+        #movimiento con colisiones en el eje x
+        self.forma.x += self.dx
+        for muro in muros:
+            if self.forma.colliderect(muro): # Si choco con un muro
+                if self.dx > 0: # Si iba a la derecha, me pego a su lado izquierdo
+                    self.forma.right = muro.left
+                elif self.dx < 0: # Si iba a la izquierda, me pego a su lado derecho
+                    self.forma.left = muro.right
+                self.dx = 0 # Si choco con un muro, la velocidad se anula
+        #movimiento con colisiones en el eje y
+        self.forma.y += self.dy
+        for muro in muros:
+            if self.forma.colliderect(muro):
+                if self.dy > 0: # Si iba hacia abajo, me pego a su techo
+                    self.forma.bottom = muro.top
+                elif self.dy < 0: # Si iba hacia arriba, me pego a su suelo
+                    self.forma.top = muro.bottom
+                self.dy = 0 # Si choco con un muro, la velocidad se anula
 
-            # Asegurarse de que el personaje al salirse de los límites de la ventana entre por el lado opuesto
-            if self.forma.left < 0: #si el personaje se sale por la izquierda
-                self.forma.right = dimensiones[0] 
-            if self.forma.right > dimensiones[0]: #si el personaje se sale por la derecha
-                self.forma.left = 0
-            if self.forma.top < 0: #si el personaje se sale por arriba
-                self.forma.bottom = dimensiones[1]
-            if self.forma.bottom > dimensiones[1]: #si el personaje se sale por abajo
-                self.forma.top = 0
+        # Asegurarse de que el personaje al salirse de los límites de la ventana entre por el lado opuesto
+        if self.forma.left < 0: #si el personaje se sale por la izquierda
+            self.forma.right = dimensiones[0] 
+        if self.forma.right > dimensiones[0]: #si el personaje se sale por la derecha
+            self.forma.left = 0
+        if self.forma.top < 0: #si el personaje se sale por arriba
+            self.forma.bottom = dimensiones[1]
+        if self.forma.bottom > dimensiones[1]: #si el personaje se sale por abajo
+            self.forma.top = 0
 
     # Funciones vacías que sobrescribirán los hijos (Pacman y Fantasma)
     def actualizar_animacion(self): pass

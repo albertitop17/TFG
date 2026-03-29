@@ -1,7 +1,7 @@
 import pygame
 from src import constantes
 import random
-
+from src.fisica import camino_esta_libre
 class Humano:
     def __init__(self):
         #empieza quieto
@@ -27,13 +27,12 @@ class Humano:
         return self.dx, self.dy
     
 class IA:
-    def obtener_movimiento(self):
+    def obtener_movimiento(self, _ ,__,___):
         #aqui va la logica de movimiento de la IA
         dx = 0  
         dy = 0
         return dx, dy
     
-
 
 class ControladorFantasmaPadre:
     def __init__(self):
@@ -63,19 +62,8 @@ class ControladorFantasmaPadre:
         for dir_x, dir_y in direcciones_posibles:
             # REGLA PAC-MAN: Los fantasmas no pueden dar la vuelta 180º
             if dir_x == -self.dx and dir_y == -self.dy and (self.dx != 0 or self.dy != 0):
-                continue 
-
-            rect_prueba = rect_actual.copy()
-            rect_prueba.x += dir_x
-            rect_prueba.y += dir_y
-
-            colisiona = False
-            for muro in muros:
-                if rect_prueba.colliderect(muro):
-                    colisiona = True
-                    break
-
-            if not colisiona:
+                continue
+            if camino_esta_libre(rect_actual, dir_x, dir_y, muros):
                 direcciones_validas.append((dir_x, dir_y))
 
         if direcciones_validas:
@@ -84,7 +72,7 @@ class ControladorFantasmaPadre:
             # Si se mete en un callejón sin salida (no debería pasar en un mapa de Pac-Man normal)
             self.dx *= -1
             self.dy *= -1
-            
+
         return self.dx, self.dy
 
     def tomar_decision(self, direcciones_validas, rect_actual, objetivo):
@@ -96,7 +84,16 @@ class ControladorFantasmaAleatorio(ControladorFantasmaPadre):
     pass
 
 class CerebroBlinky(ControladorFantasmaPadre):
+
+    def __init__(self):
+        super().__init__()
+        #Para dibujar la heuristica de Blinky en modo debug
+        self.objetivo_debug = None
+
+        
     def tomar_decision(self, direcciones_validas, rect_actual, objetivo):
+
+        self.objetivo_debug = objetivo.center # Guardamos el objetivo para usarlo en el modo debug de src/fantasma.py
         # IA DE BLINKY
         mejor_direccion = direcciones_validas[0]
         menor_distancia = float('inf')
@@ -116,7 +113,14 @@ class CerebroBlinky(ControladorFantasmaPadre):
         return mejor_direccion
 
 class CerebroBlinky2(ControladorFantasmaPadre):
+    def __init__(self):
+        super().__init__()
+        #Para dibujar la heuristica de Blinky en modo debug
+        self.objetivo_debug = None 
+
     def tomar_decision(self, direcciones_validas, rect_actual, objetivo):
+
+        self.objetivo_debug = objetivo.center # Guardamos el objetivo para usarlo en el modo debug de src/fantasma.py
         # IA DE BLINKY
         mejor_direccion = direcciones_validas[0]
         menor_distancia = float('inf')
