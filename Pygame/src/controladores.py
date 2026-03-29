@@ -38,6 +38,7 @@ class ControladorFantasmaPadre:
     def __init__(self):
         self.dx = constantes.velocidad
         self.dy = 0
+        self.modo_debug = 0 # Todos nacen con el debug apagado
 
     def obtener_movimiento(self, rect_actual, muros, objetivo=None):
         # Miramos primero si estamos en un cruce (nodo) para tomar decisiones. Si no, seguimos rectos.
@@ -67,7 +68,7 @@ class ControladorFantasmaPadre:
                 direcciones_validas.append((dir_x, dir_y))
 
         if direcciones_validas:
-            self.dx, self.dy = self.tomar_decision(direcciones_validas, rect_actual, objetivo)
+            self.dx, self.dy = self.tomar_decision(direcciones_validas, rect_actual, objetivo,muros)
         else:
             # Si se mete en un callejón sin salida (no debería pasar en un mapa de Pac-Man normal)
             self.dx *= -1
@@ -75,7 +76,7 @@ class ControladorFantasmaPadre:
 
         return self.dx, self.dy
 
-    def tomar_decision(self, direcciones_validas, rect_actual, objetivo):
+    def tomar_decision(self, direcciones_validas, rect_actual, objetivo, muros):
         # Este método está pensado para ser sobrescrito. 
         # Por defecto (si un hijo no lo cambia), hace un movimiento aleatorio.
         return random.choice(direcciones_validas)
@@ -89,9 +90,9 @@ class CerebroBlinky(ControladorFantasmaPadre):
         super().__init__()
         #Para dibujar la heuristica de Blinky en modo debug
         self.objetivo_debug = None
-
+        self.opciones_debug = [] # almacena (posicion, distancia) consideradas para el modo debug
         
-    def tomar_decision(self, direcciones_validas, rect_actual, objetivo):
+    def tomar_decision(self, direcciones_validas, rect_actual, objetivo, muros):
 
         self.objetivo_debug = objetivo.center # Guardamos el objetivo para usarlo en el modo debug de src/fantasma.py
         # IA DE BLINKY
@@ -105,37 +106,101 @@ class CerebroBlinky(ControladorFantasmaPadre):
             
             # MATEMÁTICAS: Distancia Euclidiana al Cuadrado hacia Pac-Man
             dist_cuadrada = (objetivo.centerx - futuro_x)**2 + (objetivo.centery - futuro_y)**2
+
+            # Guardamos la info para el dibujo: posición central de la futura celda y su valor
+            # Dividimos por 100 o usamos la raíz para que el número no sea gigante en pantalla
+            valor_mostrar = int(dist_cuadrada**0.5) 
+            self.opciones_debug.append(((futuro_x, futuro_y), valor_mostrar))
             
             if dist_cuadrada < menor_distancia:
                 menor_distancia = dist_cuadrada
                 mejor_direccion = (dir_x, dir_y)
 
         return mejor_direccion
+    
 
 class CerebroBlinky2(ControladorFantasmaPadre):
     def __init__(self):
         super().__init__()
         #Para dibujar la heuristica de Blinky en modo debug
         self.objetivo_debug = None 
+        self.opciones_debug = [] # almacena (posicion, distancia) consideradas para el modo debug
+        self.ruta_debug = [] # Nueva lista para los 4 puntos futuros
 
-    def tomar_decision(self, direcciones_validas, rect_actual, objetivo):
 
+    def tomar_decision(self, direcciones_validas, rect_actual, objetivo, muros):
         self.objetivo_debug = objetivo.center # Guardamos el objetivo para usarlo en el modo debug de src/fantasma.py
+        self.opciones_debug = [] # Limpiamos los cálculos del frame anterior
+        self.ruta_debug = []
+
         # IA DE BLINKY
-        mejor_direccion = direcciones_validas[0]
-        menor_distancia = float('inf')
+        #Siguiente decisión (real)
+        mejor_direccion = self._calcular_mejor_dir(direcciones_validas, rect_actual, objetivo, guardar_debug=True)
 
-        for dir_x, dir_y in direcciones_validas:
-            # Calculamos nuestra futura posición si tomamos este camino
-            futuro_x = rect_actual.x + dir_x
-            futuro_y = rect_actual.y + dir_y
-            
-            # Distancia Manhattan al Cuadrado hacia Pac-Man
-            dist_manhattan = abs(objetivo.centerx - futuro_x) + abs(objetivo.centery - futuro_y)
-                
-            if dist_manhattan < menor_distancia:
-                menor_distancia = dist_manhattan
-                mejor_direccion = (dir_x, dir_y)
+        # SIMULACIÓN: Predecir los siguientes 4 nodos (debug)
+        # Si el modo es 0 o 1, nos saltamos toda esta carga de CPU.
+        if self.modo_debug == 2:
+            self._simular_ruta_futura(mejor_direccion, rect_actual, objetivo, muros)
+
         return mejor_direccion
-    
 
+    def _calcular_mejor_dir(self, direcciones, rect, objetivo, guardar_debug = False):
+        """Función auxiliar para encontrar la mejor dirección basándose en distancia"""
+        mejor_direccion  = direcciones[0]
+        menor_dist = float('inf')
+
+        # Calculamos cuántas veces entra la velocidad en una celda (ej: 50 // 5 = 10)
+        # Esto sirve para proyectar la visión exactamente 1 casilla entera hacia adelante
+        factor = constantes.tamano_celda // constantes.velocidad
+
+        for dx, dy in direcciones:
+            # Calculamos nuestra futura posición si tomamos este camino (desde el centro de la SIGUIENTE celda)
+            futuro_x = rect.x + (dx*factor)
+            futuro_y = rect.y + (dy*factor)
+            # Distancia Manhattan hacia Pac-Man
+            dist_manhattan = abs(objetivo.centerx - futuro_x) + abs(objetivo.centery - futuro_y)
+
+            # solo guardamos si es el paso real (no una simulación)
+            if guardar_debug:
+                valor_mostrar = int(dist_manhattan**0.5)
+                self.opciones_debug.append(((futuro_x, futuro_y), valor_mostrar))
+
+            if dist_manhattan < menor_dist:
+                menor_dist = dist_manhattan
+                mejor_direccion = (dx, dy)
+
+        return mejor_direccion
+
+
+    def _simular_ruta_futura(self, dir_inicial, rect_actual, objetivo, muros):
+        """Calcula los próximos 4 movimientos solo para dibujarlos en pantalla"""
+        sim_rect = rect_actual.copy()
+        sim_dx, sim_dy = dir_inicial
+        
+        for _ in range(4):
+            # Simulamos el movimiento hasta la siguiente celda/intersección
+            sim_rect.x += sim_dx * (constantes.tamano_celda // constantes.velocidad)
+            sim_rect.y += sim_dy * (constantes.tamano_celda // constantes.velocidad)
+            
+            # Guardamos el centro de esa celda para dibujarlo luego
+            self.ruta_debug.append(sim_rect.center)
+            
+            # Buscamos la siguiente mejor dirección desde esa posición simulada
+            posibles = self._obtener_validas_sim(sim_rect, sim_dx, sim_dy, muros)
+            if posibles:
+                #limpiamos opciones_debug para no guardar los cálculos falsos de la simulación
+                #se actualizan sim_dx y sim_dy para el siguiente ciclo del bucle
+                sim_dx, sim_dy = self._calcular_mejor_dir(posibles, sim_rect, objetivo, guardar_debug=False)
+            else:
+                break
+
+    def _obtener_validas_sim(self, rect, current_dx, current_dy, muros):
+        # Función auxiliar para la simulación que evita volver atrás
+        dirs = [(0, -5), (-5, 0), (0, 5), (5, 0)]
+        validas = []
+        for dx, dy in dirs:
+            if dx == -current_dx and dy == -current_dy: 
+                continue
+            if camino_esta_libre(rect, dx, dy, muros):
+                validas.append((dx, dy))
+        return validas

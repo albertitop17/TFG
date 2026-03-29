@@ -28,11 +28,13 @@ class Game:
 
         # Lista de fantasmas: (x, y, color, cerebro)
         self.fantasmas = [
-            Fantasma(x=250, y=500, imagen_entera=sprite, controlador=CerebroBlinky(),                  color='rojo'),
-            Fantasma(x=350, y=500, imagen_entera=sprite, controlador=ControladorFantasmaAleatorio(),   color='rosa'),
-            Fantasma(x=450, y=500, imagen_entera=sprite, controlador=CerebroBlinky2(),                 color='azul'),
-            Fantasma(x=500, y=500, imagen_entera=sprite, controlador=ControladorFantasmaAleatorio(),   color='naranja'),
+            Fantasma(x=250, y=500, imagen_entera=sprite, controlador=ControladorFantasmaAleatorio(), color='rojo'),
+            Fantasma(x=350, y=500, imagen_entera=sprite, controlador=ControladorFantasmaAleatorio(), color='rosa'),
+            Fantasma(x=450, y=500, imagen_entera=sprite, controlador=CerebroBlinky2(),               color='azul'),
+            Fantasma(x=500, y=500, imagen_entera=sprite, controlador=ControladorFantasmaAleatorio(), color='naranja'),
         ]
+        
+        self.modo_debug = 0 # 0: Apagado, 1: Valores (Cajas), 2: Ruta (Línea verde)
 
     def eventos(self):
         for evento in pygame.event.get(): #registrar eventos que ocurren en el juego
@@ -44,8 +46,12 @@ class Game:
                     self.jugador.controlador = IA()
                     print("IA")
                 if evento.key == pygame.K_d:
-                    global DEBUG
-                    DEBUG = not DEBUG
+                    # Alternar entre 0, 1 y 2
+                    self.modo_debug = (self.modo_debug + 1) % 3
+                    #Avisamos a todos los cerebros del nuevo modo
+                    for f in self.fantasmas:
+                        if hasattr(f.controlador, 'modo_debug'):
+                            f.controlador.modo_debug = self.modo_debug
                    
     def update(self):
         #actualizamos el movimiento (le decimos que lo tiene que hacer, el cómo lo sabrá el)
@@ -58,9 +64,9 @@ class Game:
         self.pantalla.fill(constantes.color_fondo) #pintar el fondo de la pantalla
         self.mapa.dibujar(self.pantalla) #dibujar el mapa
 
-        self.jugador.dibujar(self.pantalla, DEBUG)
+        self.jugador.dibujar(self.pantalla, self.modo_debug) 
         for fantasma in self.fantasmas:
-            fantasma.dibujar(self.pantalla, DEBUG)
+            fantasma.dibujar(self.pantalla, self.modo_debug)
 
         pygame.display.update() #actualizar la pantalla para mostrar los cambios
 

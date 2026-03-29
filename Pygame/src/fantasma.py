@@ -55,25 +55,34 @@ class Fantasma(EnteFisico):
         # Sin escalar en cada frame: usamos el frame ya pre-escalado
         self.imagen = self.frames[direccion_visual][self.frame_index]
 
-    def dibujar(self, interfaz, debug = False): #donde lo queremos dibujar, no hace falta que sea la misma ventana
-        interfaz.blit(self.imagen, self.forma) #dibujar la imagen del personaje en la posicion y tamaño del rectangulo
-        if debug and hasattr(self.controlador, 'objetivo_debug') and self.controlador.objetivo_debug:
-        # Si el controlador tiene la variable objetivo_debug y no está vacía...
-
-            # Dibujamos el "Vector de Puntería" (Línea desde el fantasma hasta Pac-Man)
-            # Usamos el color de este fantasma para la línea (ej. Rojo)
+    def dibujar(self, interfaz, modo_debug = 0): 
+        interfaz.blit(self.imagen, self.forma)
+        
+        # MODO 1: Solo mostrar valores y la línea roja/rosa
+        if modo_debug == 1 and hasattr(self.controlador, 'objetivo_debug') and self.controlador.objetivo_debug:
             color_linea = (255, 0, 0) if self.color == 'rojo' else (255, 184, 255)
-            
-            pygame.draw.line(
-                interfaz, 
-                color_linea, 
-                self.forma.center, # Desde el centro del fantasma
-                self.controlador.objetivo_debug, # Hasta el centro de Pac-Man
-                2 # Grosor de la línea
-            )
+            pygame.draw.line(interfaz, color_linea, self.forma.center, self.controlador.objetivo_debug, 2)
 
-            # 3. (Opcional) Dibujar un punto que indique hacia dónde está intentando empujar la IA
-            # Proyectamos un punto en la dirección en la que se mueve
+            fuente = pygame.font.SysFont("Arial", 18, bold=True)
+            for pos, valor in self.controlador.opciones_debug:
+                texto = fuente.render(str(valor), True, (255, 255, 255))
+                interfaz.blit(texto, (pos[0] + 10, pos[1] + 15))
+                rect_eval = pygame.Rect(pos[0], pos[1], constantes.tamano_celda, constantes.tamano_celda)
+                pygame.draw.rect(interfaz, color_linea, rect_eval, 1)
+
+            # Punto de empuje actual
             punto_futuro_x = self.forma.centerx + (self.dx * 10)
             punto_futuro_y = self.forma.centery + (self.dy * 10)
             pygame.draw.circle(interfaz, (0, 255, 0), (punto_futuro_x, punto_futuro_y), 5)
+
+        # MODO 2: Solo mostrar la predicción de la ruta (Línea verde)
+        elif modo_debug == 2 and hasattr(self.controlador, 'ruta_debug') and self.controlador.ruta_debug:
+            for i, pos in enumerate(self.controlador.ruta_debug):
+                radio = 10 - (i * 2) 
+                color = (0, 255, 255) 
+                pygame.draw.circle(interfaz, color, pos, radio)
+                
+                if i > 0:
+                    pygame.draw.line(interfaz, color, self.controlador.ruta_debug[i-1], pos, 2)
+                else:
+                    pygame.draw.line(interfaz, color, self.forma.center, pos, 2)

@@ -44,8 +44,8 @@ class Pacman(EnteFisico):
         # Sin escalar en cada frame: usamos el frame ya pre-escalado
         self.imagen = self.frames[self.frame_index]
 
-    def dibujar(self, interfaz, debug = False): #donde lo queremos dibujar, no hace falta que sea la misma ventana
-        if debug:
+    def dibujar(self, interfaz, modo_debug = 0): #donde lo queremos dibujar, no hace falta que sea la misma ventana
+        if modo_debug != 0:
             pygame.draw.rect(interfaz, (255, 0, 0), self.forma, 2) #hitbox del personaje
         imagen_dr = pygame.transform.rotate(self.imagen, self.rotate)
         interfaz.blit(imagen_dr, self.forma) #dibujar la imagen del personaje en la posicion y tamaño del rectangulo

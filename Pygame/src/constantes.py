@@ -8,7 +8,7 @@ ancho_personaje = 50
 color_fondo = (0, 0, 0)
 
 velocidad = 5 
-FPS = 60
+FPS = 40
 
 escala_personaje = 10/3
 
