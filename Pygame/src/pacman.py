@@ -14,8 +14,11 @@ class Pacman(EnteFisico):
         self.sprite = imagen_entera
         self.frame_index = 0 #para controlar el frame de animacion
         self.frame_tiempo = pygame.time.get_ticks() #almacenamos el tiempo actual para controlar la velocidad de la animacion
-        self.imagen = pygame.transform.scale(imagen_entera.subsurface(constantes.PACMAN_COORDENADAS['derecha'][self.frame_index]), (int(constantes.ancho_personaje*constantes.escala_personaje), int(constantes.alto_personaje*constantes.escala_personaje))) #escalar la imagen del personaje al tamaño definido en constantes
         self.rotate = 0
+
+        self.frames = [escalar_imagen(imagen_entera.subsurface(coordenadas), constantes.escala_personaje) 
+                       for coordenadas in constantes.PACMAN_COORDENADAS['derecha']] #preprocesamos los frames de animacion para no tener que recortarlos y escalarlos cada vez que actualizamos la animacion
+        self.imagen = self.frames[0] #inicializamos la imagen del personaje con el primer frame de animacion
 
 
     def actualizar_animacion(self):
@@ -33,15 +36,16 @@ class Pacman(EnteFisico):
         #(podriamos añadir un string de direccion) #direccion es un string que indica la direccion del movimiento del personaje
         cooldown_animaciones = 120 #tiempo en ms entre cada cambio de frame
         tiempo_actual = pygame.time.get_ticks()
-        self.imagen = escalar_imagen(self.sprite.subsurface(constantes.PACMAN_COORDENADAS['derecha'][self.frame_index]), constantes.escala_personaje) #actualizar la imagen del personaje segun la direccion del movimiento y el frame de animacion
-
+        
         if tiempo_actual - self.frame_tiempo > cooldown_animaciones: #cambiar de frame cada 100 ms
             self.frame_tiempo = tiempo_actual
-            self.frame_index += 1
-            if self.frame_index >= 4: #si el frame index supera el numero de frames de la animacion, volver al primer frame):
-                self.frame_index = 0
+            self.frame_index = (self.frame_index + 1) % len(self.frames)
 
-    def dibujar(self, interfaz): #donde lo queremos dibujar, no hace falta que sea la misma ventana
-        pygame.draw.rect(interfaz, (255, 0, 0), self.forma, 2) #hitbox del personaje
+        # Sin escalar en cada frame: usamos el frame ya pre-escalado
+        self.imagen = self.frames[self.frame_index]
+
+    def dibujar(self, interfaz, debug = False): #donde lo queremos dibujar, no hace falta que sea la misma ventana
+        if debug:
+            pygame.draw.rect(interfaz, (255, 0, 0), self.forma, 2) #hitbox del personaje
         imagen_dr = pygame.transform.rotate(self.imagen, self.rotate)
         interfaz.blit(imagen_dr, self.forma) #dibujar la imagen del personaje en la posicion y tamaño del rectangulo

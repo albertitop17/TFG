@@ -27,7 +27,7 @@ class Humano:
         return self.dx, self.dy
     
 class IA:
-    def obtener_movimiento(self, _ ,__,___):
+    def obtener_movimiento(self,  rect_actual, muros, objetivo=None):
         #aqui va la logica de movimiento de la IA
         dx = 0  
         dy = 0

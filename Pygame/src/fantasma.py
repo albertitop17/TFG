@@ -18,10 +18,15 @@ class Fantasma(EnteFisico):
         self.frame_tiempo = pygame.time.get_ticks() #almacenamos el tiempo actual para controlar la velocidad de la animacion
 
 
-        #inicializamos el primer sprite
-        coordenadas_iniciales = constantes.FANTASMA_ROJO_COORDENADAS[self.color]['derecha'][self.frame_index]
-        self.imagen = pygame.transform.scale(imagen_entera.subsurface(coordenadas_iniciales), (constantes.tamano_celda, constantes.tamano_celda)) #escalar la imagen del personaje al tamaño definido en constantes
-        self.rotate = 0
+        # Pre-escalamos todos los frames de todas las direcciones una sola vez
+        self.frames = {
+            direccion: [
+                escalar_imagen(imagen_entera.subsurface(coords), constantes.escala_personaje)
+                for coords in lista_coords
+            ]
+            for direccion, lista_coords in constantes.FANTASMA_ROJO_COORDENADAS[self.color].items()
+        }
+        self.imagen = self.frames['derecha'][0]
 
     def actualizar_animacion(self):
         # 1. DETERMINAR LA DIRECCIÓN VISUAL
@@ -45,26 +50,17 @@ class Fantasma(EnteFisico):
         
         if tiempo_actual - self.frame_tiempo > cooldown_animaciones: #cambiar de frame cada 200 ms
             self.frame_tiempo = tiempo_actual
-            self.frame_index += 1
-            if self.frame_index >= 2: #si el frame index supera el numero de frames de la animacion, volver al primer frame):
-                self.frame_index = 0
+            self.frame_index = (self.frame_index + 1) % len(self.frames[direccion_visual])
     
-        #RECORTAR Y ACTUALIZAR LA IMAGEN
-        # Obtenemos el Rect de coordenadas correcto usando la dirección y el frame_index
-        coordenadas_sprite = constantes.FANTASMA_ROJO_COORDENADAS[self.color][direccion_visual][self.frame_index]
-        
-        # Recortamos la subsuperficie de la hoja de sprites y la escalamos al tamaño de la celda
-        imagen_recortada = self.sprite.subsurface(coordenadas_sprite)
-        self.imagen = escalar_imagen(imagen_recortada, constantes.escala_personaje)
+        # Sin escalar en cada frame: usamos el frame ya pre-escalado
+        self.imagen = self.frames[direccion_visual][self.frame_index]
 
-    def dibujar(self, interfaz): #donde lo queremos dibujar, no hace falta que sea la misma ventana
-        #pygame.draw.rect(interfaz, (255, 0, 0), self.forma, 2) #hitbox del personaje NO ES NECESARIO!!
+    def dibujar(self, interfaz, debug = False): #donde lo queremos dibujar, no hace falta que sea la misma ventana
         interfaz.blit(self.imagen, self.forma) #dibujar la imagen del personaje en la posicion y tamaño del rectangulo
-        # --- MODO DEBUG PARA EL TFG ---
+        if debug and hasattr(self.controlador, 'objetivo_debug') and self.controlador.objetivo_debug:
         # Si el controlador tiene la variable objetivo_debug y no está vacía...
-        if hasattr(self.controlador, 'objetivo_debug') and self.controlador.objetivo_debug:
-            
-            # 2. Dibujamos el "Vector de Puntería" (Línea desde el fantasma hasta Pac-Man)
+
+            # Dibujamos el "Vector de Puntería" (Línea desde el fantasma hasta Pac-Man)
             # Usamos el color de este fantasma para la línea (ej. Rojo)
             color_linea = (255, 0, 0) if self.color == 'rojo' else (255, 184, 255)
             

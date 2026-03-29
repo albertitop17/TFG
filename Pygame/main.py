@@ -5,6 +5,7 @@ from src.fantasma import Fantasma
 from src.controladores import ControladorFantasmaAleatorio, Humano, IA, CerebroBlinky, CerebroBlinky2
 from src.mapa import Mapa 
 
+DEBUG = constantes.DEBUG
 class Game:
     def __init__(self):
         
@@ -25,17 +26,13 @@ class Game:
         cerebro = Humano() #aqui se puede cambiar el controlador del personaje
         self.jugador = Pacman(x = 50, y = 50, imagen_entera = sprite, controlador = cerebro) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
 
-        cerebro_rojo = CerebroBlinky()
-        self.fantasma_rojo = Fantasma(x = 250, y = 500, imagen_entera = sprite, controlador = cerebro_rojo, color = 'rojo') 
-
-        cerebro_rosa = ControladorFantasmaAleatorio()
-        self.fantasma_rosa = Fantasma(x = 350, y = 500, imagen_entera = sprite, controlador = cerebro_rosa, color = 'rosa') 
-
-        cerebro_azul = CerebroBlinky2()
-        self.fantasma_azul = Fantasma(x = 450, y = 500, imagen_entera = sprite, controlador = cerebro_azul, color = 'azul') 
-
-        cerebro_naranja = ControladorFantasmaAleatorio()
-        self.fantasma_naranja = Fantasma(x = 500, y = 500, imagen_entera = sprite, controlador = cerebro_naranja, color = 'naranja') 
+        # Lista de fantasmas: (x, y, color, cerebro)
+        self.fantasmas = [
+            Fantasma(x=250, y=500, imagen_entera=sprite, controlador=CerebroBlinky(),                  color='rojo'),
+            Fantasma(x=350, y=500, imagen_entera=sprite, controlador=ControladorFantasmaAleatorio(),   color='rosa'),
+            Fantasma(x=450, y=500, imagen_entera=sprite, controlador=CerebroBlinky2(),                 color='azul'),
+            Fantasma(x=500, y=500, imagen_entera=sprite, controlador=ControladorFantasmaAleatorio(),   color='naranja'),
+        ]
 
     def eventos(self):
         for evento in pygame.event.get(): #registrar eventos que ocurren en el juego
@@ -46,25 +43,24 @@ class Game:
                 if evento.key == pygame.K_SPACE:
                     self.jugador.controlador = IA()
                     print("IA")
+                if evento.key == pygame.K_d:
+                    global DEBUG
+                    DEBUG = not DEBUG
                    
     def update(self):
         #actualizamos el movimiento (le decimos que lo tiene que hacer, el cómo lo sabrá el)
         dimensiones = (constantes.ancho_ventana , constantes.alto_ventana)
         self.jugador.actualizar(dimensiones, self.mapa.muros) #actualizar el jugador, le pasamos las dimensiones de la ventana para controlar los limites del movimiento y los muros para controlar las colisiones
-        self.fantasma_rojo.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador.forma) # Actualizamos al fantasma. Le pasamos 'self.jugador.forma' como objetivo para que Blinky sepa donde estamos
-        self.fantasma_rosa.actualizar(dimensiones, self.mapa.muros) 
-        self.fantasma_azul.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador.forma) # Actualizamos al fantasma. Le pasamos 'self.jugador.forma' como objetivo para que Inky sepa donde estamos
-        self.fantasma_naranja.actualizar(dimensiones, self.mapa.muros)
+        for fantasma in self.fantasmas:
+            fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador.forma)
 
     def dibujar(self):
         self.pantalla.fill(constantes.color_fondo) #pintar el fondo de la pantalla
         self.mapa.dibujar(self.pantalla) #dibujar el mapa
 
-        self.jugador.dibujar(self.pantalla)
-        self.fantasma_rojo.dibujar(self.pantalla)
-        self.fantasma_rosa.dibujar(self.pantalla)
-        self.fantasma_azul.dibujar(self.pantalla)
-        self.fantasma_naranja.dibujar(self.pantalla)
+        self.jugador.dibujar(self.pantalla, DEBUG)
+        for fantasma in self.fantasmas:
+            fantasma.dibujar(self.pantalla, DEBUG)
 
         pygame.display.update() #actualizar la pantalla para mostrar los cambios
 

@@ -81,3 +81,7 @@ FANTASMA_ROJO_COORDENADAS = {
 #multiplo de la velocidad para que el personaje pueda alinearse perfectamente con las paredes al girar, sino se quedaría atascado al intentar girar justo antes de un muro.
 #Además, es el mismo tamaño que el personaje para que encaje perfectamente en las celdas del mapa.
 tamano_celda = 50 
+
+
+
+DEBUG = False  # Cambia a True para ver hitboxes y líneas de IA
