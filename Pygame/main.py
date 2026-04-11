@@ -58,7 +58,7 @@ class Game:
         dimensiones = (constantes.ancho_ventana , constantes.alto_ventana)
         self.jugador.actualizar(dimensiones, self.mapa.muros) #actualizar el jugador, le pasamos las dimensiones de la ventana para controlar los limites del movimiento y los muros para controlar las colisiones
         for fantasma in self.fantasmas:
-            fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador.forma)
+            fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador)
 
     def dibujar(self):
         self.pantalla.fill(constantes.color_fondo) #pintar el fondo de la pantalla

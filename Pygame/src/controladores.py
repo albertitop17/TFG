@@ -67,7 +67,7 @@ class ControladorFantasmaPadre:
             if camino_esta_libre(rect_actual, dir_x, dir_y, muros):
                 direcciones_validas.append((dir_x, dir_y))
 
-        if direcciones_validas:
+        if direcciones_validas: #la decision dependera del fantasma 
             self.dx, self.dy = self.tomar_decision(direcciones_validas, rect_actual, objetivo,muros)
         else:
             # Si se mete en un callejón sin salida (no debería pasar en un mapa de Pac-Man normal)
@@ -78,7 +78,7 @@ class ControladorFantasmaPadre:
 
     def tomar_decision(self, direcciones_validas, rect_actual, objetivo, muros):
         # Este método está pensado para ser sobrescrito. 
-        # Por defecto (si un hijo no lo cambia), hace un movimiento aleatorio.
+        # Por defecto hace un movimiento aleatorio.
         return random.choice(direcciones_validas)
     
 class ControladorFantasmaAleatorio(ControladorFantasmaPadre):
@@ -94,21 +94,21 @@ class CerebroBlinky(ControladorFantasmaPadre):
         
     def tomar_decision(self, direcciones_validas, rect_actual, objetivo, muros):
 
-        self.objetivo_debug = objetivo.center # Guardamos el objetivo para usarlo en el modo debug de src/fantasma.py
+        self.objetivo_debug = objetivo.forma.center # Guardamos el objetivo para usarlo en el modo debug de src/fantasma.py
         # IA DE BLINKY
         mejor_direccion = direcciones_validas[0]
-        menor_distancia = float('inf')
+        menor_distancia = float('inf') #inicializamos con infinito para asegurarnos de que cualquier distancia real será menor
 
         for dir_x, dir_y in direcciones_validas:
             # Calculamos nuestra futura posición si tomamos este camino
             futuro_x = rect_actual.x + dir_x
             futuro_y = rect_actual.y + dir_y
             
-            # MATEMÁTICAS: Distancia Euclidiana al Cuadrado hacia Pac-Man
-            dist_cuadrada = (objetivo.centerx - futuro_x)**2 + (objetivo.centery - futuro_y)**2
+            # matemáticas: Distancia Euclidiana al Cuadrado hacia Pac-Man
+            dist_cuadrada = (objetivo.forma.centerx - futuro_x)**2 + (objetivo.forma.centery - futuro_y)**2
 
-            # Guardamos la info para el dibujo: posición central de la futura celda y su valor
-            # Dividimos por 100 o usamos la raíz para que el número no sea gigante en pantalla
+            # Debug: Guardamos la info para el dibujo: posición central de la futura celda y su valor
+            # Usamos la raíz para que el número no sea gigante en pantalla
             valor_mostrar = int(dist_cuadrada**0.5) 
             self.opciones_debug.append(((futuro_x, futuro_y), valor_mostrar))
             
@@ -129,7 +129,7 @@ class CerebroBlinky2(ControladorFantasmaPadre):
 
 
     def tomar_decision(self, direcciones_validas, rect_actual, objetivo, muros):
-        self.objetivo_debug = objetivo.center # Guardamos el objetivo para usarlo en el modo debug de src/fantasma.py
+        self.objetivo_debug = objetivo.forma.center # Guardamos el objetivo para usarlo en el modo debug de src/fantasma.py
         self.opciones_debug = [] # Limpiamos los cálculos del frame anterior
         self.ruta_debug = []
 
@@ -158,7 +158,7 @@ class CerebroBlinky2(ControladorFantasmaPadre):
             futuro_x = rect.x + (dx*factor)
             futuro_y = rect.y + (dy*factor)
             # Distancia Manhattan hacia Pac-Man
-            dist_manhattan = abs(objetivo.centerx - futuro_x) + abs(objetivo.centery - futuro_y)
+            dist_manhattan = abs(objetivo.forma.centerx - futuro_x) + abs(objetivo.forma.centery - futuro_y)
 
             # solo guardamos si es el paso real (no una simulación)
             if guardar_debug:
