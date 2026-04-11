@@ -40,7 +40,7 @@ class ControladorFantasmaPadre:
         self.dy = 0
         self.modo_debug = 0 # Todos nacen con el debug apagado
 
-    def obtener_movimiento(self, rect_actual, muros, objetivo=None):
+    def obtener_movimiento(self, rect_actual, muros, objetivo=None, lista_fantasmas=None):
         # Miramos primero si estamos en un cruce (nodo) para tomar decisiones. Si no, seguimos rectos.
         if rect_actual.x % constantes.tamano_celda != 0 or rect_actual.y % constantes.tamano_celda != 0:
             return self.dx, self.dy
@@ -68,7 +68,7 @@ class ControladorFantasmaPadre:
                 direcciones_validas.append((dir_x, dir_y))
 
         if direcciones_validas: #la decision dependera del fantasma 
-            self.dx, self.dy = self.tomar_decision(direcciones_validas, rect_actual, objetivo,muros)
+            self.dx, self.dy = self.tomar_decision(direcciones_validas, rect_actual, objetivo,muros, lista_fantasmas)
         else:
             # Si se mete en un callejón sin salida (no debería pasar en un mapa de Pac-Man normal)
             self.dx *= -1
@@ -76,7 +76,7 @@ class ControladorFantasmaPadre:
 
         return self.dx, self.dy
 
-    def tomar_decision(self, direcciones_validas, rect_actual, objetivo, muros):
+    def tomar_decision(self, direcciones_validas, rect_actual, objetivo, muros, lista_fantasmas = None):
         # Este método está pensado para ser sobrescrito. 
         # Por defecto hace un movimiento aleatorio.
         return random.choice(direcciones_validas)
@@ -92,7 +92,7 @@ class CerebroBlinky(ControladorFantasmaPadre):
         self.objetivo_debug = None
         self.opciones_debug = [] # almacena (posicion, distancia) consideradas para el modo debug
         
-    def tomar_decision(self, direcciones_validas, rect_actual, objetivo, muros):
+    def tomar_decision(self, direcciones_validas, rect_actual, objetivo, muros, lista_fantasmas = None):
 
         self.objetivo_debug = objetivo.forma.center # Guardamos el objetivo para usarlo en el modo debug de src/fantasma.py
         # IA DE BLINKY
@@ -128,7 +128,7 @@ class CerebroBlinky2(ControladorFantasmaPadre):
         self.ruta_debug = [] # Nueva lista para los 4 puntos futuros
 
 
-    def tomar_decision(self, direcciones_validas, rect_actual, objetivo, muros):
+    def tomar_decision(self, direcciones_validas, rect_actual, objetivo, muros, lista_fantasmas = None):
         self.objetivo_debug = objetivo.forma.center # Guardamos el objetivo para usarlo en el modo debug de src/fantasma.py
         self.opciones_debug = [] # Limpiamos los cálculos del frame anterior
         self.ruta_debug = []
@@ -215,7 +215,7 @@ class CerebroPinky(ControladorFantasmaPadre):
         self.opciones_debug = [] # almacena (posicion, distancia) consideradas para el modo debug
         self.ruta_debug = [] # Nueva lista para los 4 puntos futuros
 
-    def tomar_decision(self, direcciones_validas, rect_actual, jugador, muros):
+    def tomar_decision(self, direcciones_validas, rect_actual, jugador, muros, lista_fantasmas=None):
         #META DE PINKY (4 casillas por delante)
         meta_x = jugador.forma.centerx
         meta_y = jugador.forma.centery

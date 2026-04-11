@@ -53,11 +53,11 @@ class Game:
                             f.controlador.modo_debug = self.modo_debug
                    
     def update(self):
-        #actualizamos el movimiento (le decimos que lo tiene que hacer, el cómo lo sabrá el)
+        #actualizamos el movimiento (le decimos que lo tiene que hacer, el cómo lo sabrá el) 
         dimensiones = (constantes.ancho_ventana , constantes.alto_ventana)
         self.jugador.actualizar(dimensiones, self.mapa.muros) #actualizar el jugador, le pasamos las dimensiones de la ventana para controlar los limites del movimiento y los muros para controlar las colisiones
-        for fantasma in self.fantasmas:
-            fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador)
+        for fantasma in self.fantasmas: #actualizamos en fisica
+            fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador, lista_fantasmas=self.fantasma)
 
     def dibujar(self):
         self.pantalla.fill(constantes.color_fondo) #pintar el fondo de la pantalla
