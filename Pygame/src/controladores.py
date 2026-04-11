@@ -303,3 +303,60 @@ class CerebroPinky(ControladorFantasmaPadre):
             if camino_esta_libre(rect, dx, dy, muros):
                 validas.append((dx, dy))
         return validas
+    
+
+class CerebroInky(ControladorFantasmaPadre):
+    def __init__(self):
+        super().__init__()
+        self.objetivo_debug = None
+        self.opciones_debug = []
+        self.ruta_debug = []
+        self.pivote_debug = None 
+
+    def tomar_decision(self, direcciones_validas, rect_actual, jugador, muros, lista_fantasmas=None):
+        self.opciones_debug = []
+        self.ruta_debug = []
+
+        #blinky es el indice 0 en la lista de fantasmas
+        blinky_forma = lista_fantasmas[0].forma #va a ser siempre la lista no vacia? if lista_fantasmas and len(lista_fantasmas) > 0 else None
+
+        if not blinky_forma:
+            meta_x, meta_y = jugador.forma.centerx, jugador.forma.centery
+        else:
+            # pivote (2 casillas por delante de Pac-Man)
+            pivot_x = jugador.forma.centerx
+            pivot_y = jugador.forma.centery
+            distancia_pivote = 2 * constantes.tamano_celda #dos casillas por delante
+
+            if jugador.dx > 0:   # Derecha
+                pivot_x += distancia_pivote
+            elif jugador.dx < 0: # Izquierda
+                pivot_x -= distancia_pivote
+            elif jugador.dy > 0: # Abajo
+                pivot_y += distancia_pivote
+            elif jugador.dy < 0: # Arriba
+                pivot_y -= distancia_pivote
+                pivot_x -= distancia_pivote # ¡El Bug!
+
+            self.pivote_debug = (pivot_x, pivot_y)
+
+            # vector desde Blinky hasta el pivote
+            vector_x = pivot_x - blinky_forma.centerx
+            vector_y = pivot_y - blinky_forma.centery
+
+            # la meta de inky (Blinky + el doble del vector)
+            meta_x = blinky_forma.centerx + (2 * vector_x)
+            meta_y = blinky_forma.centery + (2 * vector_y)
+
+        self.objetivo_debug = (meta_x, meta_y)
+
+        # --- Lógica de persecución ---
+        debug_valores = (self.modo_debug == 1)
+        mejor_direccion = self._calcular_mejor_dir(direcciones_validas, rect_actual, meta_x, meta_y, guardar_debug=debug_valores)
+
+        if self.modo_debug == 2:
+            self._simular_ruta_futura(mejor_direccion, rect_actual, meta_x, meta_y, muros)
+
+        return mejor_direccion
+
+    # funciones puedo agruparlas??
