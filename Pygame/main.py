@@ -23,14 +23,15 @@ class Game:
         self.mapa = Mapa() #crear el mapa 
 
         #PACMAN
-        self.jugador = Pacman(x = 50, y = 50, imagen_entera = sprite, controlador = controladores.Humano()) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
+        self.jugador = Pacman(x = 13 * constantes.tamano_celda, y = 21 * constantes.tamano_celda, imagen_entera = sprite, controlador = controladores.Humano()) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
 
         # Lista de fantasmas: (x, y, color, cerebro)
+        centro_x = 13 * constantes.tamano_celda
         self.fantasmas = [
-            Fantasma(x=250, y=500, imagen_entera=sprite, controlador=controladores.CerebroBlinky(), color='rojo'),
-            Fantasma(x=350, y=500, imagen_entera=sprite, controlador=controladores.CerebroPinky()                , color='rosa'),
-            Fantasma(x=450, y=500, imagen_entera=sprite, controlador=controladores.CerebroInky(), color='azul'),
-            Fantasma(x=500, y=500, imagen_entera=sprite, controlador=controladores.CerebroClyde(), color='naranja'),
+            Fantasma(x=centro_x     , y=11 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroBlinky(), color='rojo'),
+            Fantasma(x=centro_x - 40, y=14 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroPinky(), color='rosa'),
+            Fantasma(x=centro_x     , y=14 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroInky(), color='azul'),
+            Fantasma(x=centro_x + 40, y=14 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroClyde(), color='naranja'),
         ]
         
         self.modo_debug = 0 # 0: Apagado, 1: Valores (Cajas), 2: Ruta (Prediccion siguientes pasos) 

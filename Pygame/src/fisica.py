@@ -51,6 +51,7 @@ class EnteFisico:
             self.dy = deseado_y
             return
 
+        '''
         # GIRO 90 GRADOS: Solo si puedo hacer el giro sin colisionar con un muro (sino lo guardaré hasta que pueda hacerlo)
         # Simulamos un paso en la dirección deseada creando un rectángulo fantasma
         # ALINEACIÓN MAGNÉTICA ("Snap to Grid" o "Cornering")
@@ -87,7 +88,17 @@ class EnteFisico:
             self.forma.y = pos_y_original
 
         #print(f"Intención: ({deseado_x}, {deseado_y}), Movimiento actual: ({self.dx}, {self.dy}), Colisiona: {colisiona}")
+        '''
+        # GIRO DE 90/270 GRADOS: Solo se permite si el ente está alineado con la cuadrícula
+        esta_alineado_x = (self.forma.x % constantes.tamano_celda == 0)
+        esta_alineado_y = (self.forma.y % constantes.tamano_celda == 0)
 
+        if esta_alineado_x and esta_alineado_y:
+            # Si estamos en un cruce perfecto, comprobamos si hay muro en la nueva dirección
+            if camino_esta_libre(self.forma, deseado_x, deseado_y, muros):
+                self.dx = deseado_x
+                self.dy = deseado_y
+        
     def movimiento(self, dimensiones, muros):
         #tratamos los ejes por separado para que el personaje pueda deslizarse por las paredes en lugar de quedarse atascado
         #movimiento con colisiones en el eje x

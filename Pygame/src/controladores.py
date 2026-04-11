@@ -62,12 +62,23 @@ class ControladorFantasmaPadre:
         ]
 
         direcciones_validas = []
+        
+        # Obtenemos la fila y columna actual para la lógica de la puerta
+        fila_actual = rect_actual.y // constantes.tamano_celda
+        col_actual = rect_actual.x // constantes.tamano_celda
 
         # Comprobamos qué caminos no tienen pared
         for dir_x, dir_y in direcciones_posibles:
             # REGLA PAC-MAN: Los fantasmas no pueden dar la vuelta 180º
             if dir_x == -self.dx and dir_y == -self.dy and (self.dx != 0 or self.dy != 0):
                 continue
+
+            #REGLA PAC-MAN: No volver a entrar a casa
+            # La puerta está bajo la fila 10, columnas 13 y 14. 
+            # Si estoy en la fila 10 NO puedo ir abajo
+            if dir_y > 0 and fila_actual == 10 and col_actual in (13, 14):
+                continue
+
             if camino_esta_libre(rect_actual, dir_x, dir_y, muros):
                 direcciones_validas.append((dir_x, dir_y))
 
@@ -89,6 +100,18 @@ class ControladorFantasmaPadre:
 
     def _calcular_mejor_dir(self, direcciones, rect, meta_x, meta_y, guardar_debug = False):
         """Función auxiliar para encontrar la mejor dirección basándose en distancia"""
+
+        # salir de la casa si estoy en ella
+        fila_actual = rect.y // constantes.tamano_celda
+        col_actual = rect.x // constantes.tamano_celda
+        
+        # Si estoy dentro de la casa (Filas de la 11 a la 15, Columnas de la 10 a la 17)
+        if 10 < fila_actual < 16 and 9 < col_actual < 18:
+            # Mi única meta es la salida (Fila 10, Columna 13)
+            meta_x = 13 * constantes.tamano_celda
+            meta_y = 10 * constantes.tamano_celda
+
+
         mejor_direccion  = direcciones[0]
         menor_dist = float('inf')
 
@@ -142,8 +165,18 @@ class ControladorFantasmaPadre:
         dirs = [(0, -constantes.velocidad), (-constantes.velocidad, 0), (0, constantes.velocidad), 
                 (constantes.velocidad, 0)]
         
-        return [(dx, dy) for dx, dy in dirs if not (dx == -current_dx and dy == -current_dy)
-                 and camino_esta_libre(rect, dx, dy, muros)] 
+        fila_actual = rect.y // constantes.tamano_celda
+        col_actual = rect.x // constantes.tamano_celda
+        
+        # Devolvemos la lista filtrando:
+        # 1. Que no sea un giro de 180º
+        # 2. Que no intente entrar a la casa hacia abajo por la puerta (Fila 10, Col 13 o 14)
+        # 3. Que el camino esté libre de muros
+        return [(dx, dy) for dx, dy in dirs 
+            if not (dx == -current_dx and dy == -current_dy) 
+            and not (dy > 0 and fila_actual == 10 and col_actual in (13, 14))
+            and camino_esta_libre(rect, dx, dy, muros)
+        ]
     
 class ControladorFantasmaAleatorio(ControladorFantasmaPadre):
     pass
