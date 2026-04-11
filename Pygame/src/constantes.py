@@ -5,7 +5,10 @@
 tamano_celda = 20
 
 ancho_ventana = 28 * tamano_celda # 700
-alto_ventana = 31 * tamano_celda # 775
+alto_ventana = 35 * tamano_celda # 900
+
+# Bajamos el mapa 3 celdas (60 píxeles) para dejar espacio al marcador superior
+offset_y_mapa = 3 * tamano_celda
 
 #el personaje medirá lo mismo que el tamaño de la celda 
 alto_personaje = tamano_celda
@@ -17,7 +20,7 @@ color_fondo = (0, 0, 0)
 #la velocidad debe ser divisor de tamano_celda para que el personaje pueda alinearse 
 # perfectamente con las paredes al girar, sino se quedaría atascado al intentar girar justo antes de un muro.
 velocidad = 2 
-FPS = 60
+FPS = 30
 
 #escalamos el spritr de 15/16px al tamaño de la celda
 

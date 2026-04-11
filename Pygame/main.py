@@ -23,17 +23,24 @@ class Game:
         self.mapa = Mapa() #crear el mapa 
 
         #PACMAN
-        self.jugador = Pacman(x = 13 * constantes.tamano_celda, y = 21 * constantes.tamano_celda, imagen_entera = sprite, controlador = controladores.Humano()) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
+        self.jugador = Pacman(x = 13 * constantes.tamano_celda, y = 24 * constantes.tamano_celda, imagen_entera = sprite, controlador = controladores.Humano()) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
 
         # Lista de fantasmas: (x, y, color, cerebro)
         centro_x = 13 * constantes.tamano_celda
         self.fantasmas = [
-            Fantasma(x=centro_x     , y=11 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroBlinky(), color='rojo'),
-            Fantasma(x=centro_x - 40, y=14 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroPinky(), color='rosa'),
-            Fantasma(x=centro_x     , y=14 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroInky(), color='azul'),
-            Fantasma(x=centro_x + 40, y=14 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroClyde(), color='naranja'),
+            Fantasma(x=centro_x     , y=14 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroBlinky(), color='rojo'),
+            Fantasma(x=centro_x - 40, y=17 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroPinky(), color='rosa'),
+            Fantasma(x=centro_x     , y=17 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroInky(), color='azul'),
+            Fantasma(x=centro_x + 40, y=17 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroClyde(), color='naranja'),
         ]
         
+        self.puntuacion = 0
+        self.bolitas_comidas = 0 #para liberar al inici a los fantasmas
+
+        #para escribir texto
+        pygame.font.init() #¿?¿?¿?¿?
+        self.fuente_marcador = pygame.font.SysFont("Arial", 24, bold=True)
+
         self.modo_debug = 0 # 0: Apagado, 1: Valores (Cajas), 2: Ruta (Prediccion siguientes pasos) 
 
     def eventos(self):
@@ -43,7 +50,7 @@ class Game:
             # habría que añadir alguna forma para cambiar de tipo de cerebro, humano o ia
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_SPACE:
-                    self.jugador.controlador = IA()
+                    self.jugador.controlador = controladores.IA()
                     print("IA")
                 if evento.key == pygame.K_d:
                     # Alternar entre 0, 1 y 2
@@ -56,7 +63,25 @@ class Game:
     def update(self):
         #actualizamos el movimiento (le decimos que lo tiene que hacer, el cómo lo sabrá el) 
         dimensiones = (constantes.ancho_ventana , constantes.alto_ventana)
-        self.jugador.actualizar(dimensiones, self.mapa.muros) #actualizar el jugador, le pasamos las dimensiones de la ventana para controlar los limites del movimiento y los muros para controlar las colisiones
+        self.jugador.actualizar(dimensiones, self.mapa.muros) #actualizar el jugador, le pasamos las dimensiones de
+            #la ventana para controlar los limites del movimiento y los muros para controlar las colisiones
+
+        #Mecánica de comer bolitas: comprobamos si el rectángulo del jugador colisiona con alguna bolita o super-bolita
+        # collidelist devuelve el índice del elemento con el que chocamos, o -1 si no chocamos con nada
+        indice_bolita = self.jugador.forma.collidelist(self.mapa.bolitas)
+        if indice_bolita != -1:
+            # Eliminamos la bolita de la lista (desaparece visual y físicamente)
+            self.mapa.bolitas.pop(indice_bolita)
+            self.puntuacion += 10
+            self.bolitas_comidas += 1
+            # (¡Aquí irá la lógica de liberar fantasmas más adelante!)
+
+        indice_super = self.jugador.forma.collidelist(self.mapa.super_bolitas)
+        if indice_super != -1:
+            self.mapa.super_bolitas.pop(indice_super)
+            self.puntuacion += 50
+            # (¡Aquí irá la lógica de cambiar a modo "Asustado" más adelante!)
+
         for fantasma in self.fantasmas: #actualizamos en fisica
             fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador, lista_fantasmas=self.fantasmas)
 
@@ -64,9 +89,14 @@ class Game:
         self.pantalla.fill(constantes.color_fondo) #pintar el fondo de la pantalla
         self.mapa.dibujar(self.pantalla) #dibujar el mapa
 
+        #dibujamos el jugador y los fantasmas
         self.jugador.dibujar(self.pantalla, self.modo_debug) 
         for fantasma in self.fantasmas:
             fantasma.dibujar(self.pantalla, self.modo_debug)
+
+        #dibujar el marcador (en la esquina superior izquierda)
+        texto_puntos = self.fuente_marcador.render(f"SCORE: {self.puntuacion}", True, (255, 255, 255))
+        self.pantalla.blit(texto_puntos, (10, 5))
 
         pygame.display.update() #actualizar la pantalla para mostrar los cambios
 

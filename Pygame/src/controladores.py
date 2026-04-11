@@ -43,6 +43,7 @@ class ControladorFantasmaPadre:
         self.objetivo_debug = None
         self.opciones_debug = [] # almacena (posicion, distancia) consideradas para el modo debug
         self.ruta_debug = [] # lista para las 4 posiciones futuras
+        self.offset_filas = constantes.offset_y_mapa // constantes.tamano_celda # para ajustarnos a la posición real del mapa
 
     def obtener_movimiento(self, rect_actual, muros, objetivo=None, lista_fantasmas=None):
         # Miramos primero si estamos en un cruce (nodo) para tomar decisiones. Si no, seguimos rectos.
@@ -76,7 +77,7 @@ class ControladorFantasmaPadre:
             #REGLA PAC-MAN: No volver a entrar a casa
             # La puerta está bajo la fila 10, columnas 13 y 14. 
             # Si estoy en la fila 10 NO puedo ir abajo
-            if dir_y > 0 and fila_actual == 10 and col_actual in (13, 14):
+            if dir_y > 0 and fila_actual == (10 + self.offset_filas) and col_actual in (13, 14):
                 continue
 
             if camino_esta_libre(rect_actual, dir_x, dir_y, muros):
@@ -105,11 +106,14 @@ class ControladorFantasmaPadre:
         fila_actual = rect.y // constantes.tamano_celda
         col_actual = rect.x // constantes.tamano_celda
         
-        # Si estoy dentro de la casa (Filas de la 11 a la 15, Columnas de la 10 a la 17)
-        if 10 < fila_actual < 16 and 9 < col_actual < 18:
+        # Casa fantasma original: filas 12 a 15. Con offset (+3): filas 15 a 18
+        # Puerta de salida original: fila 10. Con offset (+3): fila 13
+        fila_puerta = 10 + self.offset_filas
+        
+        if (fila_puerta < fila_actual < fila_puerta + 6) and (9 < col_actual < 18):
             # Mi única meta es la salida (Fila 10, Columna 13)
             meta_x = 13 * constantes.tamano_celda
-            meta_y = 10 * constantes.tamano_celda
+            meta_y = fila_puerta * constantes.tamano_celda
 
 
         mejor_direccion  = direcciones[0]
@@ -167,6 +171,7 @@ class ControladorFantasmaPadre:
         
         fila_actual = rect.y // constantes.tamano_celda
         col_actual = rect.x // constantes.tamano_celda
+        fila_puerta = 10 + (constantes.offset_y_mapa // constantes.tamano_celda)
         
         # Devolvemos la lista filtrando:
         # 1. Que no sea un giro de 180º
@@ -174,7 +179,7 @@ class ControladorFantasmaPadre:
         # 3. Que el camino esté libre de muros
         return [(dx, dy) for dx, dy in dirs 
             if not (dx == -current_dx and dy == -current_dy) 
-            and not (dy > 0 and fila_actual == 10 and col_actual in (13, 14))
+            and not (dy > 0 and fila_actual == fila_puerta and col_actual in (13, 14))
             and camino_esta_libre(rect, dx, dy, muros)
         ]
     
