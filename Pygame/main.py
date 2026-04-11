@@ -1,8 +1,8 @@
 import pygame
 from src import constantes
+from src import controladores
 from src.pacman import Pacman
 from src.fantasma import Fantasma
-from src.controladores import ControladorFantasmaAleatorio, Humano, IA, CerebroBlinky, CerebroBlinky2
 from src.mapa import Mapa 
 
 DEBUG = constantes.DEBUG
@@ -23,15 +23,14 @@ class Game:
         self.mapa = Mapa() #crear el mapa 
 
         #PACMAN
-        cerebro = Humano() #aqui se puede cambiar el controlador del personaje
-        self.jugador = Pacman(x = 50, y = 50, imagen_entera = sprite, controlador = cerebro) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
+        self.jugador = Pacman(x = 50, y = 50, imagen_entera = sprite, controlador = controladores.Humano()) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
 
         # Lista de fantasmas: (x, y, color, cerebro)
         self.fantasmas = [
-            Fantasma(x=250, y=500, imagen_entera=sprite, controlador=ControladorFantasmaAleatorio(), color='rojo'),
-            Fantasma(x=350, y=500, imagen_entera=sprite, controlador=ControladorFantasmaAleatorio(), color='rosa'),
-            Fantasma(x=450, y=500, imagen_entera=sprite, controlador=CerebroBlinky2(),               color='azul'),
-            Fantasma(x=500, y=500, imagen_entera=sprite, controlador=ControladorFantasmaAleatorio(), color='naranja'),
+            Fantasma(x=250, y=500, imagen_entera=sprite, controlador=controladores.CerebroBlinky2(), color='rojo'),
+            Fantasma(x=350, y=500, imagen_entera=sprite, controlador=controladores.CerebroPinky()                , color='rosa'),
+            Fantasma(x=450, y=500, imagen_entera=sprite, controlador=controladores.ControladorFantasmaAleatorio(), color='azul'),
+            Fantasma(x=500, y=500, imagen_entera=sprite, controlador=controladores.ControladorFantasmaAleatorio(), color='naranja'),
         ]
         
         self.modo_debug = 0 # 0: Apagado, 1: Valores (Cajas), 2: Ruta (Línea verde)

@@ -135,7 +135,8 @@ class CerebroBlinky2(ControladorFantasmaPadre):
 
         # IA DE BLINKY
         #Siguiente decisión (real)
-        mejor_direccion = self._calcular_mejor_dir(direcciones_validas, rect_actual, objetivo, guardar_debug=True)
+        debug_valores = (self.modo_debug == 1)
+        mejor_direccion = self._calcular_mejor_dir(direcciones_validas, rect_actual, objetivo, guardar_debug=debug_valores)
 
         # SIMULACIÓN: Predecir los siguientes 4 nodos (debug)
         # Si el modo es 0 o 1, nos saltamos toda esta carga de CPU.
@@ -197,6 +198,104 @@ class CerebroBlinky2(ControladorFantasmaPadre):
     def _obtener_validas_sim(self, rect, current_dx, current_dy, muros):
         # Función auxiliar para la simulación que evita volver atrás
         dirs = [(0, -5), (-5, 0), (0, 5), (5, 0)]
+        validas = []
+        for dx, dy in dirs:
+            if dx == -current_dx and dy == -current_dy: 
+                continue
+            if camino_esta_libre(rect, dx, dy, muros):
+                validas.append((dx, dy))
+        return validas
+    
+
+class CerebroPinky(ControladorFantasmaPadre):
+    def __init__(self):
+        super().__init__()
+        #Para dibujar la heuristica de Pinky en modo debug
+        self.objetivo_debug = None
+        self.opciones_debug = [] # almacena (posicion, distancia) consideradas para el modo debug
+        self.ruta_debug = [] # Nueva lista para los 4 puntos futuros
+
+    def tomar_decision(self, direcciones_validas, rect_actual, jugador, muros):
+        #META DE PINKY (4 casillas por delante)
+        meta_x = jugador.forma.centerx
+        meta_y = jugador.forma.centery
+        
+        distancia_emboscada = 4 * constantes.tamano_celda
+
+        # Miramos hacia dónde va Pac-Man
+        if jugador.dx > 0:   # Derecha
+            meta_x += distancia_emboscada
+        elif jugador.dx < 0: # Izquierda
+            meta_x -= distancia_emboscada
+        elif jugador.dy > 0: # Abajo
+            meta_y += distancia_emboscada
+        elif jugador.dy < 0: # Arriba
+            meta_y -= distancia_emboscada
+            # ¿bug clásico de Pinky? En el juego original
+
+        # Guardamos la meta calculada para que el modo debug dibuje la línea rosa hasta allí
+        self.objetivo_debug = (meta_x, meta_y)
+
+        #limpiamos los debugs de la iteración anterior
+        self.opciones_debug = []
+        self.ruta_debug = []
+
+        # calculo de la mejor direccion basandose en la distancia euclidiana a su meta 
+        debug_valores = (self.modo_debug == 1)
+        mejor_direccion = self._calcular_mejor_dir(direcciones_validas, rect_actual, meta_x, meta_y, guardar_debug=debug_valores)
+
+        # simulacion de ruta futura (Modo Debug 2)
+        if self.modo_debug == 2:
+            self._simular_ruta_futura(mejor_direccion, rect_actual, meta_x, meta_y, muros)
+
+        return mejor_direccion
+
+    def _calcular_mejor_dir(self, direcciones, rect, meta_x, meta_y, guardar_debug=False):
+        mejor_direccion = direcciones[0]
+        menor_dist = float('inf')
+
+        factor = constantes.tamano_celda // constantes.velocidad
+
+        for dx, dy in direcciones:
+            futuro_x = rect.x + (dx * factor)
+            futuro_y = rect.y + (dy * factor)
+            
+            # Pinky usa distancia euclidiana (al cuadrado para ahorrar CPU)
+            dist_cuadrada = (meta_x - futuro_x)**2 + (meta_y - futuro_y)**2
+
+            if guardar_debug:
+                valor_mostrar = int(dist_cuadrada**0.25) 
+                self.opciones_debug.append(((futuro_x, futuro_y), valor_mostrar))
+
+            if dist_cuadrada < menor_dist:
+                menor_dist = dist_cuadrada
+                mejor_direccion = (dx, dy)
+                
+        return mejor_direccion
+
+    def _simular_ruta_futura(self, dir_inicial, rect_actual, meta_x, meta_y, muros):
+        sim_rect = rect_actual.copy()
+        sim_dx, sim_dy = dir_inicial
+        
+        for _ in range(4):
+            sim_rect.x += sim_dx * (constantes.tamano_celda // constantes.velocidad)
+            sim_rect.y += sim_dy * (constantes.tamano_celda // constantes.velocidad)
+            
+            self.ruta_debug.append(sim_rect.center)
+            
+            posibles = self._obtener_validas_sim(sim_rect, sim_dx, sim_dy, muros)
+            if posibles:
+                sim_dx, sim_dy = self._calcular_mejor_dir(posibles, sim_rect, meta_x, meta_y, guardar_debug=False)
+            else:
+                break
+
+    def _obtener_validas_sim(self, rect, current_dx, current_dy, muros):
+        dirs = [
+            (0, -constantes.velocidad), 
+            (-constantes.velocidad, 0), 
+            (0, constantes.velocidad), 
+            (constantes.velocidad, 0)
+        ]
         validas = []
         for dx, dy in dirs:
             if dx == -current_dx and dy == -current_dy: 
