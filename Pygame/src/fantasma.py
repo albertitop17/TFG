@@ -86,7 +86,7 @@ class Fantasma(EnteFisico):
                 elif self.color == 'rosa': color_linea = (255, 184, 255)
                 else: color_linea = (255, 184, 82)
 
-                #pygame.draw.line(interfaz, color_linea, self.forma.center, self.controlador.objetivo_debug, 2)
+                pygame.draw.line(interfaz, color_linea, self.forma.center, self.controlador.objetivo_debug, 2)
 
                 rect_meta = pygame.Rect(0, 0, 12, 12)
                 rect_meta.center = self.controlador.objetivo_debug

@@ -33,7 +33,7 @@ class Game:
             Fantasma(x=500, y=500, imagen_entera=sprite, controlador=controladores.CerebroClyde(), color='naranja'),
         ]
         
-        self.modo_debug = 0 # 0: Apagado, 1: Valores (Cajas), 2: Ruta (Línea verde)
+        self.modo_debug = 0 # 0: Apagado, 1: Valores (Cajas), 2: Ruta (Prediccion siguientes pasos) 
 
     def eventos(self):
         for evento in pygame.event.get(): #registrar eventos que ocurren en el juego
