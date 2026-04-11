@@ -91,6 +91,7 @@ class Fantasma(EnteFisico):
                 rect_meta = pygame.Rect(0, 0, 12, 12)
                 rect_meta.center = self.controlador.objetivo_debug
                 pygame.draw.rect(interfaz, color_linea, rect_meta)
+                
 
             # --- NÚMEROS Y CAJAS (Para todos) ---
             fuente = pygame.font.SysFont("Arial", 18, bold=True)

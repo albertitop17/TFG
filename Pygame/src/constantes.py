@@ -82,6 +82,7 @@ FANTASMA_ROJO_COORDENADAS = {
 #Además, es el mismo tamaño que el personaje para que encaje perfectamente en las celdas del mapa.
 tamano_celda = 50 
 
+factor_proyectar = tamano_celda // velocidad
 
 
 DEBUG = False  # Cambia a True para ver hitboxes y líneas de IA

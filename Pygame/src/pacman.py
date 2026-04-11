@@ -45,7 +45,11 @@ class Pacman(EnteFisico):
         self.imagen = self.frames[self.frame_index]
 
     def dibujar(self, interfaz, modo_debug = 0): #donde lo queremos dibujar, no hace falta que sea la misma ventana
-        if modo_debug != 0:
-            pygame.draw.rect(interfaz, (255, 0, 0), self.forma, 2) #hitbox del personaje
+        if modo_debug == 1:
+            radio_miedo = 8 * constantes.tamano_celda
+            color_naranja = (255, 184, 82)
+            # Dibujamos la circunferencia del miedo de Clyde centrada en Pac-Man
+            pygame.draw.circle(interfaz, color_naranja, self.forma.center, radio_miedo, 1)
+
         imagen_dr = pygame.transform.rotate(self.imagen, self.rotate)
         interfaz.blit(imagen_dr, self.forma) #dibujar la imagen del personaje en la posicion y tamaño del rectangulo

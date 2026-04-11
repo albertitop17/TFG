@@ -94,14 +94,14 @@ class ControladorFantasmaPadre:
 
         # Calculamos cuántas veces entra la velocidad en una celda (ej: 50 // 5 = 10)
         # Esto sirve para proyectar la visión exactamente 1 casilla entera hacia adelante
-        factor = constantes.tamano_celda // constantes.velocidad
+        factor = constantes.factor_proyectar
 
         for dx, dy in direcciones:
             # Calculamos nuestra futura posición si tomamos este camino (desde el centro de la siguiente celda)
             futuro_x = rect.x + (dx*factor)
             futuro_y = rect.y + (dy*factor)
             # Distancia cuadrada hasta PacMan (usamos el centro del rectángulo para que la heurística sea más precisa)
-            dist_cuadrada = (meta_x - futuro_x)**2 + (meta_y - futuro_y)**2
+            dist_cuadrada = (meta_x - futuro_x)*(meta_x - futuro_x) + (meta_y - futuro_y)*(meta_y - futuro_y) #mejor que hacer **2
 
             # solo guardamos si es el paso real (no una simulación)
             if guardar_debug:
@@ -139,14 +139,11 @@ class ControladorFantasmaPadre:
 
     def _obtener_validas_sim(self, rect, current_dx, current_dy, muros):
         # Función auxiliar para la simulación que evita volver atrás
-        dirs = [(0, -constantes.velocidad), (-constantes.velocidad, 0), (0, constantes.velocidad), (constantes.velocidad, 0)]
-        validas = []
-        for dx, dy in dirs:
-            if dx == -current_dx and dy == -current_dy: 
-                continue
-            if camino_esta_libre(rect, dx, dy, muros):
-                validas.append((dx, dy))
-        return validas
+        dirs = [(0, -constantes.velocidad), (-constantes.velocidad, 0), (0, constantes.velocidad), 
+                (constantes.velocidad, 0)]
+        
+        return [(dx, dy) for dx, dy in dirs if not (dx == -current_dx and dy == -current_dy)
+                 and camino_esta_libre(rect, dx, dy, muros)] 
     
 class ControladorFantasmaAleatorio(ControladorFantasmaPadre):
     pass
@@ -154,52 +151,24 @@ class ControladorFantasmaAleatorio(ControladorFantasmaPadre):
 class CerebroBlinky(ControladorFantasmaPadre):
 
     #usará el init del padre
-        
-    def tomar_decision(self, direcciones_validas, rect_actual, objetivo, muros, lista_fantasmas = None):
-
-        self.objetivo_debug = objetivo.forma.center # Guardamos el objetivo para usarlo en el modo debug de src/fantasma.py
-        # IA DE BLINKY
-        mejor_direccion = direcciones_validas[0]
-        menor_distancia = float('inf') #inicializamos con infinito para asegurarnos de que cualquier distancia real será menor
-
-        for dir_x, dir_y in direcciones_validas:
-            # Calculamos nuestra futura posición si tomamos este camino
-            futuro_x = rect_actual.x + dir_x
-            futuro_y = rect_actual.y + dir_y
-            
-            # matemáticas: Distancia Euclidiana al Cuadrado hacia Pac-Man
-            dist_cuadrada = (objetivo.forma.centerx - futuro_x)**2 + (objetivo.forma.centery - futuro_y)**2
-
-            # Debug: Guardamos la info para el dibujo: posición central de la futura celda y su valor
-            # Usamos la raíz para que el número no sea gigante en pantalla
-            valor_mostrar = int(dist_cuadrada**0.5) 
-            self.opciones_debug.append(((futuro_x, futuro_y), valor_mostrar))
-            
-            if dist_cuadrada < menor_distancia:
-                menor_distancia = dist_cuadrada
-                mejor_direccion = (dir_x, dir_y)
-
-        return mejor_direccion
-    
-
-class CerebroBlinky2(ControladorFantasmaPadre):
-
-    #usará el init del padre
 
     def tomar_decision(self, direcciones_validas, rect_actual, jugador, muros, lista_fantasmas = None):
         self.objetivo_debug = jugador.forma.center # Guardamos el objetivo para usarlo en el modo debug de src/fantasma.py
         self.opciones_debug = [] # Limpiamos los cálculos del frame anterior
         self.ruta_debug = []
-
+        #meta pacman
+        meta_x = jugador.forma.centerx
+        meta_y = jugador.forma.centery
+        self.objetivo_debug = (meta_x, meta_y) # Guardamos la meta para el modo debug
         # IA DE BLINKY
         #Siguiente decisión (real)
         debug_valores = (self.modo_debug == 1)
-        mejor_direccion = self._calcular_mejor_dir(direcciones_validas, rect_actual, jugador.forma.centerx, jugador.forma.centery, guardar_debug=debug_valores)
+        mejor_direccion = self._calcular_mejor_dir(direcciones_validas, rect_actual, meta_x, meta_y, guardar_debug=debug_valores)
 
-        # SIMULACIÓN: Predecir los siguientes 4 nodos (debug)
+        # SIMULACIÓN: Predecir los siguientes 4 pasos (debug)
         # Si el modo es 0 o 1, nos saltamos toda esta carga de CPU.
         if self.modo_debug == 2:
-            self._simular_ruta_futura(mejor_direccion, rect_actual,  jugador.forma.centerx, jugador.forma.centery, muros)
+            self._simular_ruta_futura(mejor_direccion, rect_actual,  meta_x, meta_y, muros)
 
         return mejor_direccion
 
@@ -300,4 +269,43 @@ class CerebroInky(ControladorFantasmaPadre):
 
         return mejor_direccion
 
-    
+
+class CerebroClyde(ControladorFantasmaPadre):
+
+    def __init__(self):
+        super().__init__()
+        #Calculamos el radio de miedo al cuadrado una sola vez al nacer
+        # 8 casillas * tamaño de celda, y todo al cuadrado
+        radio = 8 * constantes.tamano_celda
+        self.radio_miedo_cuadrado = radio * radio
+
+    def tomar_decision(self, direcciones_validas, rect_actual, jugador, muros, lista_fantasmas=None):
+        self.opciones_debug = []
+        self.ruta_debug = []
+
+        # calculmos la distancia en línea recta hacia Pac-Man
+        dist_x = jugador.forma.centerx - rect_actual.centerx
+        dist_y = jugador.forma.centery - rect_actual.centery
+        distancia_a_pacman_cuadrada = (dist_x*dist_x + dist_y*dist_y) #al cuadrado, para evitar la raíz cuadrada
+        
+        # 2. Decidir la meta
+        if distancia_a_pacman_cuadrada > self.radio_miedo_cuadrado:
+            # Si estoy lejos, persigo
+            meta_x = jugador.forma.centerx
+            meta_y = jugador.forma.centery
+        else:
+            # Si estoy cerca, huye a su esquina (Inferior Izquierda)
+            # es X=0, Y=alto de la ventana
+            meta_x = 0
+            meta_y = constantes.alto_ventana
+
+        self.objetivo_debug = (meta_x, meta_y)
+
+        # 3. Calcular dirección (PUEDO USAR EL DE BLINKY??????)
+        debug_valores = (self.modo_debug == 1)
+        mejor_direccion = self._calcular_mejor_dir(direcciones_validas, rect_actual, meta_x, meta_y, guardar_debug=debug_valores)
+
+        if self.modo_debug == 2:
+            self._simular_ruta_futura(mejor_direccion, rect_actual, meta_x, meta_y, muros)
+
+        return mejor_direccion

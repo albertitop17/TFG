@@ -27,10 +27,10 @@ class Game:
 
         # Lista de fantasmas: (x, y, color, cerebro)
         self.fantasmas = [
-            Fantasma(x=250, y=500, imagen_entera=sprite, controlador=controladores.CerebroBlinky2(), color='rojo'),
+            Fantasma(x=250, y=500, imagen_entera=sprite, controlador=controladores.CerebroBlinky(), color='rojo'),
             Fantasma(x=350, y=500, imagen_entera=sprite, controlador=controladores.CerebroPinky()                , color='rosa'),
             Fantasma(x=450, y=500, imagen_entera=sprite, controlador=controladores.CerebroInky(), color='azul'),
-            Fantasma(x=500, y=500, imagen_entera=sprite, controlador=controladores.ControladorFantasmaAleatorio(), color='naranja'),
+            Fantasma(x=500, y=500, imagen_entera=sprite, controlador=controladores.CerebroClyde(), color='naranja'),
         ]
         
         self.modo_debug = 0 # 0: Apagado, 1: Valores (Cajas), 2: Ruta (Línea verde)
