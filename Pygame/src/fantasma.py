@@ -60,26 +60,55 @@ class Fantasma(EnteFisico):
         
         # MODO 1: Solo mostrar valores y la línea roja/rosa
         if modo_debug == 1 and hasattr(self.controlador, 'objetivo_debug') and self.controlador.objetivo_debug:
-            color_linea = (255, 0, 0) if self.color == 'rojo' else (255, 184, 255)
-            pygame.draw.line(interfaz, color_linea, self.forma.center, self.controlador.objetivo_debug, 2)
+            
+            # exclusivo de inky 
+            if self.color == 'azul' and hasattr(self.controlador, 'pivote_debug') and self.controlador.pivote_debug and self.controlador.blinky_debug:
+                pivote = self.controlador.pivote_debug
+                meta = self.controlador.objetivo_debug
+                blinky_pos = self.controlador.blinky_debug
 
+                # Línea 1: Desde Blinky hasta el pivote (Gris claro)
+                pygame.draw.line(interfaz, (200, 200, 200), blinky_pos, pivote, 2)
+                # Línea 2: Desde el pivote hasta la meta (Gris claro)
+                pygame.draw.line(interfaz, (200, 200, 200), pivote, meta, 2)
+
+                # Dibujar el pivote como un círculo
+                pygame.draw.circle(interfaz, (150, 150, 150), pivote, 6)
+                
+                # Dibujar la meta como un cuadradito cyan 
+                rect_meta = pygame.Rect(0, 0, 12, 12)
+                rect_meta.center = meta
+                pygame.draw.rect(interfaz, (0, 255, 255), rect_meta)
+
+            # resto de fantasmas
+            else:
+                if self.color == 'rojo': color_linea = (255, 0, 0)
+                elif self.color == 'rosa': color_linea = (255, 184, 255)
+                else: color_linea = (255, 184, 82)
+
+                #pygame.draw.line(interfaz, color_linea, self.forma.center, self.controlador.objetivo_debug, 2)
+
+                rect_meta = pygame.Rect(0, 0, 12, 12)
+                rect_meta.center = self.controlador.objetivo_debug
+                pygame.draw.rect(interfaz, color_linea, rect_meta)
+
+            # --- NÚMEROS Y CAJAS (Para todos) ---
             fuente = pygame.font.SysFont("Arial", 18, bold=True)
             for pos, valor in self.controlador.opciones_debug:
                 texto = fuente.render(str(valor), True, (255, 255, 255))
                 interfaz.blit(texto, (pos[0] + 10, pos[1] + 15))
+                # Dibujamos la cajita blanca
                 rect_eval = pygame.Rect(pos[0], pos[1], constantes.tamano_celda, constantes.tamano_celda)
-                pygame.draw.rect(interfaz, color_linea, rect_eval, 1)
-
-            # Punto de empuje actual
-            punto_futuro_x = self.forma.centerx + (self.dx * 10)
-            punto_futuro_y = self.forma.centery + (self.dy * 10)
-            pygame.draw.circle(interfaz, (0, 255, 0), (punto_futuro_x, punto_futuro_y), 5)
+                pygame.draw.rect(interfaz, (255, 255, 255), rect_eval, 1)
 
         # MODO 2: Solo mostrar la predicción de la ruta (Línea verde)
         elif modo_debug == 2 and hasattr(self.controlador, 'ruta_debug') and self.controlador.ruta_debug:
             for i, pos in enumerate(self.controlador.ruta_debug):
                 radio = 10 - (i * 2) 
-                color = (0, 255, 255) 
+                if self.color == 'rojo': color = (255, 0, 0)
+                elif self.color == 'rosa': color = (255, 184, 255)
+                elif self.color == 'azul': color = (0, 255, 255)
+                else: color = (255, 184, 82)
                 pygame.draw.circle(interfaz, color, pos, radio)
                 
                 if i > 0:

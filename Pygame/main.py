@@ -29,7 +29,7 @@ class Game:
         self.fantasmas = [
             Fantasma(x=250, y=500, imagen_entera=sprite, controlador=controladores.CerebroBlinky2(), color='rojo'),
             Fantasma(x=350, y=500, imagen_entera=sprite, controlador=controladores.CerebroPinky()                , color='rosa'),
-            Fantasma(x=450, y=500, imagen_entera=sprite, controlador=controladores.ControladorFantasmaAleatorio(), color='azul'),
+            Fantasma(x=450, y=500, imagen_entera=sprite, controlador=controladores.CerebroInky(), color='azul'),
             Fantasma(x=500, y=500, imagen_entera=sprite, controlador=controladores.ControladorFantasmaAleatorio(), color='naranja'),
         ]
         
@@ -57,7 +57,7 @@ class Game:
         dimensiones = (constantes.ancho_ventana , constantes.alto_ventana)
         self.jugador.actualizar(dimensiones, self.mapa.muros) #actualizar el jugador, le pasamos las dimensiones de la ventana para controlar los limites del movimiento y los muros para controlar las colisiones
         for fantasma in self.fantasmas: #actualizamos en fisica
-            fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador, lista_fantasmas=self.fantasma)
+            fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador, lista_fantasmas=self.fantasmas)
 
     def dibujar(self):
         self.pantalla.fill(constantes.color_fondo) #pintar el fondo de la pantalla
