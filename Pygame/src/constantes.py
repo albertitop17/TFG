@@ -20,7 +20,7 @@ color_fondo = (0, 0, 0)
 #la velocidad debe ser divisor de tamano_celda para que el personaje pueda alinearse 
 # perfectamente con las paredes al girar, sino se quedaría atascado al intentar girar justo antes de un muro.
 velocidad = 2 
-FPS = 30
+FPS = 50
 
 #escalamos el spritr de 15/16px al tamaño de la celda
 
@@ -74,5 +74,22 @@ FANTASMA_ROJO_COORDENADAS = {
         'izquierda': [(35, 119, 15, 15), (52, 119, 15, 15)],
         'arriba': [(69, 119, 15, 15), (86, 119, 15, 15)],
         'abajo': [(103, 119, 15, 15), (120, 119, 15, 15)]
+    }
+}
+
+FANTASMA_ESTADOS_ESPECIALES = {
+    'asustado_azul': [
+        (137, 68, 15, 15), # Azul frame 1
+        (154, 68, 15, 15)  # Azul frame 2
+    ],
+    'asustado_blanco': [
+        (171, 68, 15, 15), # Blanco frame 1 (parpadeo de aviso)
+        (188, 68, 15, 15)  # Blanco frame 2
+    ],
+    'ojos': {
+        'derecha':   (137, 85, 15, 15),
+        'izquierda': (154, 85, 15, 15),
+        'arriba':    (171, 85, 15, 15),
+        'abajo':     (188, 85, 15, 15)
     }
 }

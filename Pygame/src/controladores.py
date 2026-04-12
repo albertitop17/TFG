@@ -38,14 +38,21 @@ class ControladorFantasmaPadre:
     def __init__(self):
         self.dx = constantes.velocidad
         self.dy = 0
+
+        self.estado = "perseguir" # Máquina de estados: perseguir, asustado u ojos
+        
+        self.liberado = True
+        self.offset_filas = constantes.offset_y_mapa // constantes.tamano_celda # para ajustarnos a la posición real del mapa
+
         self.modo_debug = 0 # Todos nacen con el debug apagado
         #variables del modo debug que heredan todos los fantasmas
         self.objetivo_debug = None
         self.opciones_debug = [] # almacena (posicion, distancia) consideradas para el modo debug
         self.ruta_debug = [] # lista para las 4 posiciones futuras
-        self.offset_filas = constantes.offset_y_mapa // constantes.tamano_celda # para ajustarnos a la posición real del mapa
-
+        
     def obtener_movimiento(self, rect_actual, muros, objetivo=None, lista_fantasmas=None):
+
+        if not self.liberado: return 0, 0
         # Miramos primero si estamos en un cruce (nodo) para tomar decisiones. Si no, seguimos rectos.
         if rect_actual.x % constantes.tamano_celda != 0 or rect_actual.y % constantes.tamano_celda != 0:
             return self.dx, self.dy
@@ -61,7 +68,6 @@ class ControladorFantasmaPadre:
             (0, constantes.velocidad),    # Abajo
             (constantes.velocidad, 0)     # Derecha
         ]
-
         direcciones_validas = []
         
         # Obtenemos la fila y columna actual para la lógica de la puerta
@@ -70,21 +76,26 @@ class ControladorFantasmaPadre:
 
         # Comprobamos qué caminos no tienen pared
         for dir_x, dir_y in direcciones_posibles:
-            # REGLA PAC-MAN: Los fantasmas no pueden dar la vuelta 180º
+            # Regla PAC-MAN: Los fantasmas no pueden dar la vuelta 180º
             if dir_x == -self.dx and dir_y == -self.dy and (self.dx != 0 or self.dy != 0):
                 continue
 
-            #REGLA PAC-MAN: No volver a entrar a casa
-            # La puerta está bajo la fila 10, columnas 13 y 14. 
-            # Si estoy en la fila 10 NO puedo ir abajo
+            # Regla PAC-MAN: No volver a entrar al spawn
+            # La puerta está bajo la fila 10, columnas 13 y 14.  Si estoy en la fila 10 NO puedo ir abajo
             if dir_y > 0 and fila_actual == (10 + self.offset_filas) and col_actual in (13, 14):
-                continue
+                # Si el fantasma es solo ojos, puede entrar a la casa
+                if self.estado != "ojos":
+                    continue
 
             if camino_esta_libre(rect_actual, dir_x, dir_y, muros):
                 direcciones_validas.append((dir_x, dir_y))
 
         if direcciones_validas: #la decision dependera del fantasma 
-            self.dx, self.dy = self.tomar_decision(direcciones_validas, rect_actual, objetivo,muros, lista_fantasmas)
+            if self.estado == "asustado":
+                # Movimiento completamente aleatorio
+                self.dx, self.dy = random.choice(direcciones_validas)
+            else:
+                self.dx, self.dy = self.tomar_decision(direcciones_validas, rect_actual, objetivo,muros, lista_fantasmas)
         else:
             # Si se mete en un callejón sin salida (no debería pasar en un mapa de Pac-Man normal)
             self.dx *= -1

@@ -41,6 +41,8 @@ class Game:
         pygame.font.init() #¿?¿?¿?¿?
         self.fuente_marcador = pygame.font.SysFont("Arial", 24, bold=True)
 
+        self.tiempo_asustado = 0 #contador para el modo asustado
+
         self.modo_debug = 0 # 0: Apagado, 1: Valores (Cajas), 2: Ruta (Prediccion siguientes pasos) 
 
     def eventos(self):
@@ -80,7 +82,31 @@ class Game:
         if indice_super != -1:
             self.mapa.super_bolitas.pop(indice_super)
             self.puntuacion += 50
-            # (¡Aquí irá la lógica de cambiar a modo "Asustado" más adelante!)
+            
+            # activamos el modo asustado en los fantasmas
+            self.tiempo_asustado = pygame.time.get_ticks()
+            for fantasma in self.fantasmas:
+                # Solo les damos la vuelta si estaban persiguiendo (si son "ojos" no se inmutan)
+                if fantasma.controlador.estado == "perseguir":
+                    fantasma.controlador.estado = "asustado"
+                    
+                    # --- NUEVO: REVERSIÓN FORZADA 180º ---
+                    # Invertimos la velocidad física del ente
+                    fantasma.dx *= -1
+                    fantasma.dy *= -1
+                    # Invertimos la memoria de dirección del cerebro
+                    fantasma.controlador.dx *= -1
+                    fantasma.controlador.dy *= -1
+
+        # tiempo asustados de los fantasmas
+        tiempo_actual = pygame.time.get_ticks()
+        if self.tiempo_asustado > 0:
+            tiempo_transcurrido = (tiempo_actual - self.tiempo_asustado) // 1000
+            if tiempo_transcurrido >= 8: # Duración del susto: 8 segundos
+                self.tiempo_asustado = 0
+                for fantasma in self.fantasmas:
+                    # Volvemos al estado normal
+                    fantasma.controlador.estado = "perseguir"
 
         for fantasma in self.fantasmas: #actualizamos en fisica
             fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador, lista_fantasmas=self.fantasmas)

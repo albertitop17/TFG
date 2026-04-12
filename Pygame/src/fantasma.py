@@ -19,6 +19,7 @@ class Fantasma(EnteFisico):
 
 
         # Pre-escalamos todos los frames de todas las direcciones una sola vez
+        #frames de persecución
         self.frames = {
             direccion: [
                 escalar_imagen(imagen_entera.subsurface(coords), constantes.escala_personaje)
@@ -26,36 +27,55 @@ class Fantasma(EnteFisico):
             ]
             for direccion, lista_coords in constantes.FANTASMA_ROJO_COORDENADAS[self.color].items()
         }
-        self.imagen = self.frames['derecha'][0]
+
+        # frames modo asustado
+        self.frames_asustado = [
+            escalar_imagen(imagen_entera.subsurface(coords), constantes.escala_personaje)
+            for coords in constantes.FANTASMA_ESTADOS_ESPECIALES['asustado_azul']
+        ]
+
+        # frames modo ojos
+        self.frames_ojos = {
+            direccion: escalar_imagen(imagen_entera.subsurface(coords), constantes.escala_personaje)
+            for direccion, coords in constantes.FANTASMA_ESTADOS_ESPECIALES['ojos'].items()
+        }
+
+        self.imagen = self.frames['derecha'][0] #inicializamos por defecto
 
     def actualizar_animacion(self):
-        # 1. DETERMINAR LA DIRECCIÓN VISUAL
+        # dirección visual (modo perseguir)
         # Por defecto, si está quieto, miramos a dónde iba antes.
         # Creamos una variable 'direccion_visual' para usar como clave del diccionario.
-        if self.dx > 0:
-            direccion_visual = 'derecha'
-        elif self.dx < 0:
-            direccion_visual = 'izquierda'
-        elif self.dy > 0:
-            direccion_visual = 'abajo'
-        elif self.dy < 0:
-            direccion_visual = 'arriba'
-        else:
-            # Si dx y dy son 0 (chocado), mantenemos la animación actual.
-            # No actualizamos la imagen y salimos.
-            return
-        
+        if self.dx > 0: direccion_visual = 'derecha'
+        elif self.dx < 0: direccion_visual = 'izquierda'
+        elif self.dy > 0: direccion_visual = 'abajo'
+        elif self.dy < 0: direccion_visual = 'arriba'
+        else: return # Si dx,dy==0 (chocado), mantenemos la animación actual.
+            
         cooldown_animaciones = 120 #tiempo en ms entre cada cambio de frame
         tiempo_actual = pygame.time.get_ticks()
         
-        if tiempo_actual - self.frame_tiempo > cooldown_animaciones: #cambiar de frame cada 200 ms
-            self.frame_tiempo = tiempo_actual
-            self.frame_index = (self.frame_index + 1) % len(self.frames[direccion_visual])
-    
-        # Sin escalar en cada frame: usamos el frame ya pre-escalado
-        self.imagen = self.frames[direccion_visual][self.frame_index]
+        # Distinguimos casos en función del estado del fantasma: (perseguir, asustado o ojos) orptimizado sin reescalar
+        estado = self.controlador.estado
+        if estado == "perseguir":
+            if tiempo_actual - self.frame_tiempo > cooldown_animaciones: #cambiar de frame cada 200 ms
+                self.frame_tiempo = tiempo_actual
+                self.frame_index = (self.frame_index + 1) % len(self.frames[direccion_visual])
+            self.imagen = self.frames[direccion_visual][self.frame_index]
+
+        elif estado == "asustado":
+            # Asustado no depende de la dirección, siempre muestra el fantasma azul
+            if tiempo_actual - self.frame_tiempo > cooldown_animaciones: #cambiar de frame cada 200 ms
+                self.frame_tiempo = tiempo_actual
+                self.frame_index = (self.frame_index + 1) % len(self.frames_asustado)
+            self.imagen = self.frames_asustado[self.frame_index]
+
+        elif estado == "ojos":
+            # Los ojos no tienen animación de fotogramas, solo cambian si giran
+            self.imagen = self.frames_ojos[direccion_visual]
 
     def dibujar(self, interfaz, modo_debug = 0): 
+
         interfaz.blit(self.imagen, self.forma)
         
         # MODO 1: Solo mostrar valores y la línea roja/rosa
