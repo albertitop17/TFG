@@ -88,17 +88,16 @@ class Game:
             for fantasma in self.fantasmas:
                 # Solo les damos la vuelta si estaban persiguiendo (si son "ojos" no se inmutan)
                 if fantasma.controlador.estado == "perseguir":
-                    fantasma.controlador.estado = "asustado"
-                    
-                    # --- NUEVO: REVERSIÓN FORZADA 180º ---
-                    # Invertimos la velocidad física del ente
-                    fantasma.dx *= -1
-                    fantasma.dy *= -1
-                    # Invertimos la memoria de dirección del cerebro
-                    fantasma.controlador.dx *= -1
-                    fantasma.controlador.dy *= -1
+                    fantasma.controlador.estado = "asustado" #tienen que dar la vuelta 180º y reducir su velocidad
+                    # frenado y giro 180º (forzamos la velocidad a magnitud 1 en sentido contrario)
+                    # velocidad física del ente 
+                    if fantasma.dx != 0: fantasma.dx = -constantes.velocidad_asustados if fantasma.dx > 0 else constantes.velocidad_asustados
+                    if fantasma.dy != 0: fantasma.dy = -constantes.velocidad_asustados if fantasma.dy > 0 else constantes.velocidad_asustados
+                    # memoria de dirección del cerebro
+                    if fantasma.controlador.dx != 0: fantasma.controlador.dx = -constantes.velocidad_asustados if fantasma.controlador.dx > 0 else constantes.velocidad_asustados
+                    if fantasma.controlador.dy != 0: fantasma.controlador.dy = -constantes.velocidad_asustados if fantasma.controlador.dy > 0 else constantes.velocidad_asustados
 
-        # tiempo asustados de los fantasmas
+        # controlador del tiempo asustados de los fantasmas 
         tiempo_actual = pygame.time.get_ticks()
         if self.tiempo_asustado > 0:
             tiempo_transcurrido = (tiempo_actual - self.tiempo_asustado) // 1000
@@ -107,6 +106,19 @@ class Game:
                 for fantasma in self.fantasmas:
                     # Volvemos al estado normal
                     fantasma.controlador.estado = "perseguir"
+                    # ACELERACIÓN (Recuperan la magnitud de constantes.velocidad)
+                    vel = constantes.velocidad
+                    if fantasma.dx != 0: fantasma.dx = vel if fantasma.dx > 0 else -vel
+                    if fantasma.dy != 0: fantasma.dy = vel if fantasma.dy > 0 else -vel
+                    if fantasma.controlador.dx != 0: fantasma.controlador.dx = vel if fantasma.controlador.dx > 0 else -vel
+                    if fantasma.controlador.dy != 0: fantasma.controlador.dy = vel if fantasma.controlador.dy > 0 else -vel
+
+                    # SINCRONIZACIÓN DE CUADRÍCULA (Corrección de Píxel Impar)
+                    # Si se han quedado en un píxel impar, los empujamos 1 píxel hacia adelante para que no se salten la baldosa
+                    if fantasma.forma.x % 2 != 0: 
+                        fantasma.forma.x += 1 if fantasma.dx > 0 else -1
+                    if fantasma.forma.y % 2 != 0:
+                        fantasma.forma.y += 1 if fantasma.dy > 0 else -1
 
         for fantasma in self.fantasmas: #actualizamos en fisica
             fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador, lista_fantasmas=self.fantasmas)

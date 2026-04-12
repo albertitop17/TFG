@@ -20,6 +20,7 @@ color_fondo = (0, 0, 0)
 #la velocidad debe ser divisor de tamano_celda para que el personaje pueda alinearse 
 # perfectamente con las paredes al girar, sino se quedaría atascado al intentar girar justo antes de un muro.
 velocidad = 2 
+velocidad_asustados = 1 # los fantasmas asustados van a la mitad de velocidad
 FPS = 50
 
 #escalamos el spritr de 15/16px al tamaño de la celda

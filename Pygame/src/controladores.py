@@ -61,12 +61,15 @@ class ControladorFantasmaPadre:
         if not objetivo:
             return self.dx, self.dy
 
+        # irán más lentos si están en modo asustados
+        vel_actual = constantes.velocidad_asustados if self.estado == "asustado" else constantes.velocidad 
+
         # Tenemos 4 direcciones posibles
         direcciones_posibles = [
-            (0, -constantes.velocidad),   # Arriba
-            (-constantes.velocidad, 0),   # Izquierda
-            (0, constantes.velocidad),    # Abajo
-            (constantes.velocidad, 0)     # Derecha
+            (0, -vel_actual),   # Arriba
+            (-vel_actual, 0),   # Izquierda
+            (0, vel_actual),    # Abajo
+            (vel_actual, 0)     # Derecha
         ]
         direcciones_validas = []
         
