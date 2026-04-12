@@ -43,6 +43,11 @@ class Game:
 
         self.tiempo_asustado = 0 #contador para el modo asustado
 
+        self.modo_global = "dispersion" # El juego empieza siempre en dispersión
+        self.tiempo_cambio_modo = pygame.time.get_ticks()
+        # Tiempos en segundos: [Tiempo Dispersión, Tiempo Persecución]
+        self.duraciones_oleada = constantes.duraciones_oleada
+
         self.modo_debug = 0 # 0: Apagado, 1: Valores (Cajas), 2: Ruta (Prediccion siguientes pasos) 
 
     def eventos(self):
@@ -140,6 +145,32 @@ class Game:
                     # ¡El fantasma nos come a nosotros!
                     # (De momento solo ponemos un print, más adelante haremos la pantalla de Game Over)
                     print("¡PAC-MAN HA MUERTO!")
+
+
+        # --- NUEVO: CONTROL DEL TEMPORIZADOR DE OLEADAS (DISPERSIÓN / PERSEGUIR) ---
+        tiempo_actual = pygame.time.get_ticks()
+        
+        # Si NO estamos en modo asustado (el susto pausa el cronómetro de oleadas)
+        if self.tiempo_asustado == 0:
+            tiempo_transcurrido_oleada = (tiempo_actual - self.tiempo_cambio_modo) // 1000
+            # Determinamos cuánto debe durar el modo actual
+            duracion_actual = self.duraciones_oleada[0] if self.modo_global == "dispersion" else self.duraciones_oleada[1]
+
+            if tiempo_transcurrido_oleada >= duracion_actual:
+                # reseteamos el reloj
+                self.tiempo_cambio_modo = tiempo_actual     
+                # alternamos el modo
+                self.modo_global = "perseguir" if self.modo_global == "dispersion" else "dispersion"
+                # aplicamos el cambio a los fantasmas y forzamos el giro de 180º
+                for fantasma in self.fantasmas:
+                    # Solo aplicamos esto a fantasmas vivos (los ojos y los asustados van a lo suyo)
+                    if fantasma.controlador.estado in ["perseguir", "dispersion"]:
+                        fantasma.controlador.estado = self.modo_global
+                        # al igual que cunado comemos la super-bolita, se hace un giro de 180º
+                        fantasma.dx *= -1
+                        fantasma.dy *= -1
+                        fantasma.controlador.dx *= -1
+                        fantasma.controlador.dy *= -1
 
     def dibujar(self):
         self.pantalla.fill(constantes.color_fondo) #pintar el fondo de la pantalla

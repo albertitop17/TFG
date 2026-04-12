@@ -39,7 +39,7 @@ class ControladorFantasmaPadre:
         self.dx = constantes.velocidad
         self.dy = 0
 
-        self.estado = "perseguir" # Máquina de estados: perseguir, asustado u ojos
+        self.estado = "dispersion" # Máquina de estados: perseguir, asustado u ojos (o dispersion)
         
         self.liberado = True
         self.offset_filas = constantes.offset_y_mapa // constantes.tamano_celda # para ajustarnos a la posición real del mapa
@@ -100,6 +100,9 @@ class ControladorFantasmaPadre:
             elif self.estado == "ojos":
                 # la logica de movimiento es ir al spawn
                 self.dx, self.dy = self._logica_ojos(direcciones_validas, rect_actual, muros)
+            elif self.estado == "dispersion":
+                #cada uno se dirige a su esquina correspondiente
+                self.dx, self.dy = self._logica_dispersion(direcciones_validas, rect_actual, muros)
             else:
                 self.dx, self.dy = self.tomar_decision(direcciones_validas, rect_actual, objetivo,muros, lista_fantasmas)
         else:
@@ -234,14 +237,29 @@ class ControladorFantasmaPadre:
             self._simular_ruta_futura(mejor_direccion, rect_actual, meta_x, meta_y, muros)
 
         return mejor_direccion
+    
 
+    def _logica_dispersion(self, direcciones_validas, rect_actual, muros):
+        self.opciones_debug = []
+        self.ruta_debug = []
+        # meta del hijo
+        meta_x, meta_y = self.meta_dispersion
+        self.objetivo_debug = (meta_x, meta_y)
+        # Calculamos el camino hacia esa esquina
+        debug_valores = (self.modo_debug == 1)
+        mejor_direccion = self._calcular_mejor_dir(direcciones_validas, rect_actual, meta_x, meta_y, guardar_debug=debug_valores)
+        if self.modo_debug == 2:
+            self._simular_ruta_futura(mejor_direccion, rect_actual, meta_x, meta_y, muros)
+        return mejor_direccion
 
 class ControladorFantasmaAleatorio(ControladorFantasmaPadre):
     pass
 
 class CerebroBlinky(ControladorFantasmaPadre):
 
-    #usará el init del padre
+    def __init__(self):
+        super().__init__()
+        self.meta_dispersion = (26 * constantes.tamano_celda, self.offset_filas * constantes.tamano_celda)
 
     def tomar_decision(self, direcciones_validas, rect_actual, jugador, muros, lista_fantasmas = None):
         self.objetivo_debug = jugador.forma.center # Guardamos el objetivo para usarlo en el modo debug de src/fantasma.py
@@ -266,7 +284,9 @@ class CerebroBlinky(ControladorFantasmaPadre):
 
 class CerebroPinky(ControladorFantasmaPadre):
     
-    #usará el init del padre
+    def __init__(self):
+        super().__init__()
+        self.meta_dispersion = (1 * constantes.tamano_celda, self.offset_filas * constantes.tamano_celda)
 
     def tomar_decision(self, direcciones_validas, rect_actual, jugador, muros, lista_fantasmas=None):
         #META DE PINKY (4 casillas por delante)
@@ -309,6 +329,7 @@ class CerebroPinky(ControladorFantasmaPadre):
 class CerebroInky(ControladorFantasmaPadre):
     def __init__(self):
         super().__init__()
+        self.meta_dispersion = (26 * constantes.tamano_celda, 30 * constantes.tamano_celda)
         self.pivote_debug = None 
         self.blinky_debug = None # guardamos dónde está Blinky para el dibujo
 
@@ -365,6 +386,7 @@ class CerebroClyde(ControladorFantasmaPadre):
 
     def __init__(self):
         super().__init__()
+        self.meta_dispersion = (1 * constantes.tamano_celda, 30 * constantes.tamano_celda)
         #Calculamos el radio de miedo al cuadrado una sola vez al nacer
         # 8 casillas * tamaño de celda, y todo al cuadrado
         radio = 8 * constantes.tamano_celda

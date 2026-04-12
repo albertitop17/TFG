@@ -125,7 +125,7 @@ class Fantasma(EnteFisico):
         # MODO 2: Solo mostrar la predicción de la ruta (Línea verde)
         elif modo_debug == 2 and hasattr(self.controlador, 'ruta_debug') and self.controlador.ruta_debug:
             for i, pos in enumerate(self.controlador.ruta_debug):
-                radio = 10 - (i * 2) 
+                radio = 7 - (i * 2) 
                 if self.color == 'rojo': color = (255, 0, 0)
                 elif self.color == 'rosa': color = (255, 184, 255)
                 elif self.color == 'azul': color = (0, 255, 255)

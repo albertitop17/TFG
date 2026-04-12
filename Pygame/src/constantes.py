@@ -23,6 +23,8 @@ velocidad = 2
 velocidad_asustados = 1 # los fantasmas asustados van a la mitad de velocidad
 FPS = 50
 
+duraciones_oleada = [7, 20] # Duración de cada oleada en segundos (Dispersión, Persecución)
+
 #escalamos el spritr de 15/16px al tamaño de la celda
 
 escala_personaje = tamano_celda / 15.0 
