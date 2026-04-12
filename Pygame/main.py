@@ -104,24 +104,42 @@ class Game:
             if tiempo_transcurrido >= 8: # Duración del susto: 8 segundos
                 self.tiempo_asustado = 0
                 for fantasma in self.fantasmas:
-                    # Volvemos al estado normal
-                    fantasma.controlador.estado = "perseguir"
-                    # ACELERACIÓN (Recuperan la magnitud de constantes.velocidad)
-                    vel = constantes.velocidad
-                    if fantasma.dx != 0: fantasma.dx = vel if fantasma.dx > 0 else -vel
-                    if fantasma.dy != 0: fantasma.dy = vel if fantasma.dy > 0 else -vel
-                    if fantasma.controlador.dx != 0: fantasma.controlador.dx = vel if fantasma.controlador.dx > 0 else -vel
-                    if fantasma.controlador.dy != 0: fantasma.controlador.dy = vel if fantasma.controlador.dy > 0 else -vel
+                    if fantasma.controlador.estado == "asustado":
+                        # Volvemos al estado normal
+                        fantasma.controlador.estado = "perseguir"
+                        # les devolvemos la velocidad normal
+                        vel = constantes.velocidad
+                        if fantasma.dx != 0: fantasma.dx = vel if fantasma.dx > 0 else -vel
+                        if fantasma.dy != 0: fantasma.dy = vel if fantasma.dy > 0 else -vel
+                        if fantasma.controlador.dx != 0: fantasma.controlador.dx = vel if fantasma.controlador.dx > 0 else -vel
+                        if fantasma.controlador.dy != 0: fantasma.controlador.dy = vel if fantasma.controlador.dy > 0 else -vel
 
-                    # SINCRONIZACIÓN DE CUADRÍCULA (Corrección de Píxel Impar)
-                    # Si se han quedado en un píxel impar, los empujamos 1 píxel hacia adelante para que no se salten la baldosa
+                        # sincronizamos la cuadricula impar
+                        # Si se han quedado en un píxel impar, los empujamos 1 píxel hacia adelante para que no se salten la baldosa
+                        if fantasma.forma.x % 2 != 0: 
+                            fantasma.forma.x += 1 if fantasma.dx > 0 else -1
+                        if fantasma.forma.y % 2 != 0:
+                            fantasma.forma.y += 1 if fantasma.dy > 0 else -1
+
+        for fantasma in self.fantasmas: #actualizamos en fisica
+            fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador, lista_fantasmas=self.fantasmas)
+
+        for fantasma in self.fantasmas:
+            # Comprobamos si sus rectángulos se superponen
+            if self.jugador.forma.colliderect(fantasma.forma): #nos hemos comido al fantasma o nos ha comido a nosotros
+                if fantasma.controlador.estado == "asustado":
+                    fantasma.controlador.estado = "ojos"
+                    self.puntuacion += 200
+                    #volvemos a sincronizarlo a la cuadricula (par)
                     if fantasma.forma.x % 2 != 0: 
                         fantasma.forma.x += 1 if fantasma.dx > 0 else -1
                     if fantasma.forma.y % 2 != 0:
                         fantasma.forma.y += 1 if fantasma.dy > 0 else -1
-
-        for fantasma in self.fantasmas: #actualizamos en fisica
-            fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador, lista_fantasmas=self.fantasmas)
+                        
+                elif fantasma.controlador.estado == "perseguir":
+                    # ¡El fantasma nos come a nosotros!
+                    # (De momento solo ponemos un print, más adelante haremos la pantalla de Game Over)
+                    print("¡PAC-MAN HA MUERTO!")
 
     def dibujar(self):
         self.pantalla.fill(constantes.color_fondo) #pintar el fondo de la pantalla

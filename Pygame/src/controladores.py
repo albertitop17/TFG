@@ -97,6 +97,9 @@ class ControladorFantasmaPadre:
             if self.estado == "asustado":
                 # Movimiento completamente aleatorio
                 self.dx, self.dy = random.choice(direcciones_validas)
+            elif self.estado == "ojos":
+                # la logica de movimiento es ir al spawn
+                self.dx, self.dy = self._logica_ojos(direcciones_validas, rect_actual, muros)
             else:
                 self.dx, self.dy = self.tomar_decision(direcciones_validas, rect_actual, objetivo,muros, lista_fantasmas)
         else:
@@ -123,8 +126,7 @@ class ControladorFantasmaPadre:
         # Casa fantasma original: filas 12 a 15. Con offset (+3): filas 15 a 18
         # Puerta de salida original: fila 10. Con offset (+3): fila 13
         fila_puerta = 10 + self.offset_filas
-        
-        if (fila_puerta < fila_actual < fila_puerta + 6) and (9 < col_actual < 18):
+        if self.estado != "ojos" and (fila_puerta < fila_actual < fila_puerta + 6) and (9 < col_actual < 18):
             # Mi única meta es la salida (Fila 10, Columna 13)
             meta_x = 13 * constantes.tamano_celda
             meta_y = fila_puerta * constantes.tamano_celda
@@ -197,6 +199,43 @@ class ControladorFantasmaPadre:
             and camino_esta_libre(rect, dx, dy, muros)
         ]
     
+    def _logica_ojos(self, direcciones_validas, rect_actual, muros):
+        self.opciones_debug = []
+        self.ruta_debug = []
+
+        fila_actual = rect_actual.y // constantes.tamano_celda
+        col_actual = rect_actual.x // constantes.tamano_celda
+        
+        fila_puerta = 10 + self.offset_filas
+        fila_dentro_casa = fila_puerta + 3 # dentro del spawn
+
+        # meta para el debug
+        meta_x = 13 * constantes.tamano_celda
+        meta_y = fila_puerta * constantes.tamano_celda #primer checkpoint es la puerta
+
+        # si ya estoy justo encima de la puerta o bajando hacia adentro, 
+        # actualizo mi meta para que apunte al FONDO de la casa.
+        if col_actual in (13, 14) and fila_puerta <= fila_actual <= fila_dentro_casa:
+            meta_y = fila_dentro_casa * constantes.tamano_celda
+
+        self.objetivo_debug = (meta_x, meta_y) 
+
+        # Solo resucita si está en el centro de la casa
+        if fila_actual == fila_dentro_casa and col_actual in (13, 14):
+            self.estado = "perseguir"
+            # No cambiamos la dirección. En el siguiente fotograma ya estará vivo,
+            # y la logica de ecape que hemos hecho en _calcular_mejor_dir lo forzará a subir y salir.
+
+        # calculamos el camino vorazmente
+        debug_valores = (self.modo_debug == 1)
+        mejor_direccion = self._calcular_mejor_dir(direcciones_validas, rect_actual, meta_x, meta_y, guardar_debug=debug_valores)
+
+        if self.modo_debug == 2:
+            self._simular_ruta_futura(mejor_direccion, rect_actual, meta_x, meta_y, muros)
+
+        return mejor_direccion
+
+
 class ControladorFantasmaAleatorio(ControladorFantasmaPadre):
     pass
 
