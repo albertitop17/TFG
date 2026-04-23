@@ -2,13 +2,14 @@ import pygame
 from src import constantes
 import random
 from src.fisica import camino_esta_libre
+import heapq
 class Humano:
     def __init__(self):
         #empieza quieto
         self.dx = 0
         self.dy = 0
 
-    def obtener_movimiento(self, _ ,__,___, _____):
+    def obtener_movimiento(self, **kwargs):
         
         teclas = pygame.key.get_pressed() #obtener el estado de todas las teclas
         if teclas[pygame.K_LEFT]: #si la tecla de flecha izquierda está presionada
@@ -26,13 +27,168 @@ class Humano:
 
         return self.dx, self.dy
     
+
 class IA:
-    def obtener_movimiento(self,  rect_actual, muros, objetivo=None):
-        #aqui va la logica de movimiento de la IA
-        dx = 0  
-        dy = 0
-        return dx, dy
-    
+    def __init__(self):
+        self.dx = 0
+        self.dy = 0
+
+    def obtener_movimiento(self, rect_actual, muros, objetivo=None, lista_fantasmas=None, mapa_logico=None, bolitas=None, **kwargs):
+        
+        # Si no me pasan bolitas o mapa, no puedo hacer A*, me quedo quieto
+        if not bolitas or not mapa_logico:
+            return 0, 0
+        # 1 - solo calculamos un nuevo camino si estamos alineados en la cuadrícula (podríamos hacerlo mas veces? mejora en eficiencia/winrate?)
+        if rect_actual.x % constantes.tamano_celda != 0 or rect_actual.y % constantes.tamano_celda != 0:
+            return self.dx, self.dy
+
+        # 2 - Discretizamos las coordenadas (de Píxeles a Coordenadas de Cuadrícula)
+        x_discretizada = rect_actual.centerx // constantes.tamano_celda
+        y_discretizada = (rect_actual.centery - constantes.offset_y_mapa) // constantes.tamano_celda
+        nodo_origen = (x_discretizada, y_discretizada)
+
+        # 3 - Encontramos la bolita más cercana (Distancia Manhattan en píxeles)
+        #meta_bolita = min(bolitas, key=lambda bolita: abs(rect_actual.centerx - bolita.centerx) + abs(rect_actual.centery - bolita.centery)) # NO VALE 
+        #pero no debería haber demasiadas en pantalla a la vez. Si fuera un problema, podríamos optimizarlo con una estructura espacial.
+        # 3 - Encontramos la bolita más cercana (Distancia con Portales en píxeles)
+        ancho_px = constantes.columnas_mapa * constantes.tamano_celda
+        y_tunel_px = (constantes.tunel * constantes.tamano_celda) + constantes.offset_y_mapa #fila del tunel
+        
+        meta_bolita = min( #busqueda greedy con la distancia de portales O(nº bolitas restantes)
+            bolitas, 
+            key=lambda b: self.distancia_con_portales(
+                rect_actual.centerx, rect_actual.centery, 
+                b.centerx, b.centery, 
+                ancho_px, y_tunel_px
+            )
+        )
+        # 4 - Meta matemática (IMPORTANTE EL OFFSET EN Y PARA QUE APUNTE AL LUGAR REAL DEL MAPA)
+        # Usamos .x y .y de la bolita que son las esquinas superiores izquierdas (mejor centrex?)
+        bolita_dis_x = meta_bolita.x // constantes.tamano_celda  #necesitamos hacer la división entera para obtener la coordenada de la cuadrícula
+        bolita_dis_y = (meta_bolita.y - constantes.offset_y_mapa) // constantes.tamano_celda
+        bolita_dis = (bolita_dis_x, bolita_dis_y)
+
+        # 5 - Aplicamos el Algoritmo A* weighted (con peso de los fantasmas)
+        camino = self.a_star_search(nodo_origen, bolita_dis, mapa_logico, lista_fantasmas)
+
+        # 6 - Traducir el siguiente nodo del camino en velocidades físicas (dx, dy)
+        if camino and len(camino) > 1:
+            next_node = camino[1] # El índice 0 es el nodo actual, el 1 es el siguiente paso
+            
+            # Calculamos la diferencia matemática entre la casilla a la que vamos y en la que estamos
+            dx_grid = next_node[0] - x_discretizada
+            dy_grid = next_node[1] - y_discretizada
+            
+            # --- MOVIMIENTO CON ARITMÉTICA MODULAR (Portales integrados) ---
+            
+            # Si el salto es 1 a la derecha (ej: de x=14 a x=15 -> 15-14 = 1)
+            # O si cruzamos el portal hacia la derecha (ej: de x=27 a x=0 -> 0-27 = -27)
+            if dx_grid == 1 or dx_grid < -1:
+                self.dx, self.dy = constantes.velocidad, 0
+                
+            # Si el salto es 1 a la izquierda (ej: de x=15 a x=14 -> 14-15 = -1)
+            # O si cruzamos el portal hacia la izquierda (ej: de x=0 a x=27 -> 27-0 = 27)
+            elif dx_grid == -1 or dx_grid > 1:
+                self.dx, self.dy = -constantes.velocidad, 0
+                
+            # Movimientos verticales (sin túnel)
+            elif dy_grid == 1:
+                self.dx, self.dy = 0, constantes.velocidad
+            elif dy_grid == -1:
+                self.dx, self.dy = 0, -constantes.velocidad
+        else:
+            self.dx, self.dy = 0, 0 # hemos llegado o no hay camino
+        return self.dx, self.dy
+
+    def a_star_search(self, nodo_origen, meta, mapa_logico, lista_fantasmas):
+        #Implementació de A* Graph Search 
+        #Devuelve una lista de nodos (tuplas) desde 'start' hasta 'goal'.
+        
+        frontera = []
+        # La cola de prioridad guarda tuplas de: (f(n), g(n), nodo_actual, camino_acumulado)
+        heapq.heappush(frontera, (0, 0, nodo_origen, [nodo_origen]))
+        # 'visitados' mapea un nodo con el coste real 'g(n)' más bajo encontrado hacia él 0(1)
+        visitados = {nodo_origen: 0}
+        # Direcciones posibles: (dx, dy) en la cuadrícula (discretizada)
+        direcciones = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+        # precalculamos las posiciones discretas de los fantasmas (con un set para que 'in' sea de tiempo 0(1)) 
+        posiciones_fantasmas = set()
+        if lista_fantasmas:
+            for f in lista_fantasmas:
+                # Discretizamos sus posiciones igual que con Pac-Man
+                fantasma_dis_x = f.forma.centerx // constantes.tamano_celda
+                fantasma_dis_y = (f.forma.centery - constantes.offset_y_mapa) // constantes.tamano_celda
+                posiciones_fantasmas.add((fantasma_dis_x, fantasma_dis_y))
+        #hasta que no tengamos nodos para explorar
+        while frontera:
+            # popeamos el nodo con menor f(n) de la frontera
+            f_n, g_n, actual, camino = heapq.heappop(frontera)
+            # Miramos is hemos alcanzado el objetivo
+            if actual == meta:
+                return camino
+            # Añadimos los nodos vecinos al actual
+            for dx, dy in direcciones:
+                #siguiente = (actual[0] + dx, actual[1] + dy)
+                # Usamos variables sueltas (para poder modificarlas)
+                next_x = actual[0] + dx
+                next_y = actual[1] + dy
+
+                # hacemos que el portal identifique el otro lado del tunel como vecino 
+                if actual[1] == constantes.tunel: # Si estamos en la fila del túnel, el nodo vecino del otro lado del mapa también es accesible
+                    if actual[0] == 0 and dx == -1: #si la coord x es 0 y estamos mirando a la izq (en el tunel)
+                        next_x = constantes.columnas_mapa - 1 # Salto a la derecha ((actual-(-1,0))%ancho_mapa )
+                    elif actual[0] == constantes.columnas_mapa - 1 and dx == 1: #por el lado derecho
+                        next_x = 0 # Salto a la izquierda
+
+                siguiente = (next_x, next_y)
+
+
+                # Comprobamos los límites del mapa y si es muro (MAPA es matriz de strings)
+                if 0 <= siguiente[1] < len(mapa_logico) and 0 <= siguiente[0] < len(mapa_logico[0]): #cambiarlo por ctes
+                    celda = mapa_logico[siguiente[1]][siguiente[0]]
+                    
+                    if celda != "1":  # no es un muro
+                        coste_paso = 1
+                        # Si en el nodo destino hay un fantasma, el coste se dispara.
+                        if siguiente in posiciones_fantasmas:
+                            coste_paso += 1000
+                        nuevo_coste_g = g_n + coste_paso  # c(s, a, s') = 1 si no hay fantasma, 1001 si hay fantasma
+                        # Graph Search: Comprobar si el nodo ya se ha visitado y si el nuevo camino es más barato
+                        if siguiente not in visitados or nuevo_coste_g < visitados[siguiente]:
+                            visitados[siguiente] = nuevo_coste_g
+                            # f(n) = g(n) + h(n)
+                            # Variables del mapa y el túnel
+                            ancho_mapa = constantes.columnas_mapa
+                            y_tunel = constantes.tunel # fila del túnel (ajustada al offset???)
+
+                            #Para la heuristica, calculamos las 3 distancias posibles y nos quedamos con la menor (la mejor)
+                            # 1. Distancia Manhattan directa
+                            h_directo = abs(siguiente[0] - meta[0]) + abs(siguiente[1] - meta[1])
+                            # 2. Distancia cruzando por la izquierda (siguiente -> Izq -> Der -> Meta)
+                            h_izq = (siguiente[0] + abs(siguiente[1] - y_tunel)) + 1 + ((ancho_mapa - 1 - meta[0]) + abs(y_tunel - meta[1]))
+                            # 3. Distancia cruzando por la derecha (siguiente -> Der -> Izq -> Meta)
+                            h_der = ((ancho_mapa - 1 - siguiente[0]) + abs(siguiente[1] - y_tunel)) + 1 + (meta[0] + abs(y_tunel - meta[1]))
+
+                            # Tu heurística final
+                            h_n = min(h_directo, h_izq, h_der)
+                            prioridad = nuevo_coste_g + h_n
+
+                            heapq.heappush(frontera, (prioridad, nuevo_coste_g, siguiente, camino + [siguiente]))
+        return [] # Devuelve vacío si no se encuentra solución
+
+    def distancia_con_portales(self, px1, py1, px2, py2, ancho_px, y_tunel_px):
+        #calcula la distancia teniendo en cuenta el tunel ¿deberia hacerlo con la euclidea?
+        # Distancia Manhattan normal
+        dist_directa = abs(px1 - px2) + abs(py1 - py2)
+
+        #Distancia cruzando por el túnel (entrando por la izquierda)
+        # Vamos a x=0, cruzamos (+ 1 celda), y vamos desde x=ancho_px hasta la meta
+        dist_izq = (px1 + abs(py1 - y_tunel_px)) + constantes.tamano_celda + ((ancho_px - px2) + abs(y_tunel_px - py2))
+
+        #Distancia cruzando por el túnel (entrando por la derecha)
+        dist_der = ((ancho_px - px1) + abs(py1 - y_tunel_px)) + constantes.tamano_celda + (px2 + abs(y_tunel_px - py2))
+
+        return min(dist_directa, dist_izq, dist_der)
 
 class ControladorFantasmaPadre:
     def __init__(self):
@@ -50,7 +206,7 @@ class ControladorFantasmaPadre:
         self.opciones_debug = [] # almacena (posicion, distancia) consideradas para el modo debug
         self.ruta_debug = [] # lista para las 4 posiciones futuras
         
-    def obtener_movimiento(self, rect_actual, muros, objetivo=None, lista_fantasmas=None):
+    def obtener_movimiento(self, rect_actual, muros, objetivo=None, lista_fantasmas=None, **kwargs):
 
         if not self.liberado: return 0, 0
         # Miramos primero si estamos en un cruce (nodo) para tomar decisiones. Si no, seguimos rectos.
@@ -358,7 +514,7 @@ class CerebroInky(ControladorFantasmaPadre):
                 pivot_y += distancia_pivote
             elif jugador.dy < 0: # Arriba
                 pivot_y -= distancia_pivote
-                pivot_x -= distancia_pivote # ¡El Bug!
+                pivot_x -= distancia_pivote 
 
             self.pivote_debug = (pivot_x, pivot_y)
 

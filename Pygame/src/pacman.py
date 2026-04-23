@@ -10,7 +10,7 @@ def escalar_imagen(imagen, escala):
 class Pacman(EnteFisico):
     def __init__(self, x, y, imagen_entera, controlador):
         super().__init__(x, y, controlador) #llamamos a la fisica del padre
-
+        
         self.sprite = imagen_entera
         self.frame_index = 0 #para controlar el frame de animacion
         self.frame_tiempo = pygame.time.get_ticks() #almacenamos el tiempo actual para controlar la velocidad de la animacion

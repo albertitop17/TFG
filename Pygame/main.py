@@ -24,7 +24,7 @@ class Game:
 
         #PACMAN
         self.spawn_pacman = (13 * constantes.tamano_celda, 24 * constantes.tamano_celda) #para luego respawnear
-        self.jugador = Pacman(x = self.spawn_pacman[0], y = self.spawn_pacman[1], imagen_entera = sprite, controlador = controladores.Humano()) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
+        self.jugador = Pacman(x = self.spawn_pacman[0], y = self.spawn_pacman[1], imagen_entera = sprite, controlador = controladores.IA()) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
 
         # Lista de fantasmas: (x, y, color, cerebro)
         centro_x = 13 * constantes.tamano_celda
@@ -74,8 +74,14 @@ class Game:
     def update(self):
         #actualizamos el movimiento (le decimos que lo tiene que hacer, el cómo lo sabrá el) 
         dimensiones = (constantes.ancho_ventana , constantes.alto_ventana)
-        self.jugador.actualizar(dimensiones, self.mapa.muros) #actualizar el jugador, le pasamos las dimensiones de
-            #la ventana para controlar los limites del movimiento y los muros para controlar las colisiones
+        self.jugador.actualizar(
+            dimensiones=(constantes.ancho_ventana, constantes.alto_ventana), 
+            muros=self.mapa.muros, 
+            objetivo=None, # De momento no pasamos fantasmas a A*
+            lista_fantasmas=self.fantasmas, # Pasamos la lista completa de fantasmas para que pueda evitarlos
+            mapa_logico=self.mapa.matriz, # << Tienes que exponer la matriz MAPA de mapa.py
+            bolitas=self.mapa.bolitas   # << Las bolitas actuales para buscar el objetivo
+        )
 
         #Mecánica de comer bolitas: comprobamos si el rectángulo del jugador colisiona con alguna bolita o super-bolita
         # collidelist devuelve el índice del elemento con el que chocamos, o -1 si no chocamos con nada
@@ -132,24 +138,24 @@ class Game:
 
         for fantasma in self.fantasmas: #actualizamos en fisica
             fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador, lista_fantasmas=self.fantasmas)
-
+        
         for fantasma in self.fantasmas:
             # Comprobamos si sus rectángulos se superponen
             if self.jugador.forma.colliderect(fantasma.forma): #nos hemos comido al fantasma o nos ha comido a nosotros
                 if fantasma.controlador.estado == "asustado":
                     fantasma.controlador.estado = "ojos"
                     self.puntuacion += 200
-                    pygame.time.delay(1000)
+                    pygame.time.delay(500)
                     #volvemos a sincronizarlo a la cuadricula (par)
                     if fantasma.forma.x % 2 != 0: 
                         fantasma.forma.x += 1 if fantasma.dx > 0 else -1
                     if fantasma.forma.y % 2 != 0:
                         fantasma.forma.y += 1 if fantasma.dy > 0 else -1
-                        
+                
                 elif fantasma.controlador.estado in ["perseguir", "dispersion"]:
                     self.morir() #perdemos una vida y reiniciamos posiciones
                     break # Salimos del bucle para evitar múltiples colisiones en el mismo frame
-                
+        
         # control del cronometro de oleadas (persecución/dispersión)
         tiempo_actual = pygame.time.get_ticks()
         
@@ -181,9 +187,10 @@ class Game:
 
         #dibujamos el jugador y los fantasmas
         self.jugador.dibujar(self.pantalla, self.modo_debug) 
+        
         for fantasma in self.fantasmas:
             fantasma.dibujar(self.pantalla, self.modo_debug)
-
+        
         #dibujar el marcador (en la esquina superior izquierda)
         texto_puntos = self.fuente_marcador.render(f"SCORE: {self.puntuacion}", True, (255, 255, 255))
         self.pantalla.blit(texto_puntos, (10, 5))
