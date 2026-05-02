@@ -36,7 +36,7 @@ class Game:
         ]
         
 
-        self.vidas = 3
+        self.vidas = 6
         self.puntuacion = 0
         self.bolitas_comidas = 0 #para liberar al inici a los fantasmas
         self.game_over = False
@@ -194,6 +194,10 @@ class Game:
         #dibujar el marcador (en la esquina superior izquierda)
         texto_puntos = self.fuente_marcador.render(f"SCORE: {self.puntuacion}", True, (255, 255, 255))
         self.pantalla.blit(texto_puntos, (10, 5))
+
+        vidas = self.fuente_marcador.render(f"VIDAS: {6-self.vidas}", True, (255, 255, 255))
+        self.pantalla.blit(vidas, (430, 5))
+
 
         pygame.display.update() #actualizar la pantalla para mostrar los cambios
 

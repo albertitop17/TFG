@@ -1,49 +1,59 @@
-#MAPA
+"""
+Configuración y constantes del juego Pacman.
+Agrupamos variables estátricas como dimensiones, velocidades, coordenadas de sprites, etc. 
+En caso de querer modificar una variable, solo se tendrá que cambiar aquí.
+"""
 
-#multiplo de la velocidad para que el personaje pueda alinearse perfectamente con las paredes al girar, sino se quedaría atascado al intentar girar justo antes de un muro.
-#Además, es el mismo tamaño que el personaje para que encaje perfectamente en las celdas del mapa.
+# DIMENSIONES Y CUADRÍCULA ------------
+
+#  El tamaño de la celda es vital que encaje tanto con el mapa como con los personajes
 tamano_celda = 20
 
-ancho_ventana = 28 * tamano_celda # 700
-alto_ventana = 35 * tamano_celda # 900
+# Dimensiones del mapa original (28 columnas x 35 filas)
+ancho_ventana = 28 * tamano_celda  # 560 pixeles
+alto_ventana = 35 * tamano_celda   # 700 pixeles
 
-# Bajamos el mapa 3 celdas (60 píxeles) para dejar espacio al marcador superior
-offset_y_mapa = 3 * tamano_celda
+# Espacio reservado en la parte superior para el HUD (marcador y vidas)
+offset_y_mapa = 3 * tamano_celda  # 60 pixeles
 
-#el personaje medirá lo mismo que el tamaño de la celda 
+# Los personajes medirán exactamente lo mismo que la celda, haciendo posible que accedan de forma precisa
 alto_personaje = tamano_celda
 ancho_personaje = tamano_celda
 
-#tambien podria definir colores aqui
-color_fondo = (0, 0, 0)
-
-#la velocidad debe ser divisor de tamano_celda para que el personaje pueda alinearse 
-# perfectamente con las paredes al girar, sino se quedaría atascado al intentar girar justo antes de un muro.
-velocidad = 2 
-velocidad_asustados = 1 # los fantasmas asustados van a la mitad de velocidad
-FPS = 60
-
-duraciones_oleada = [7, 20] # Duración de cada oleada en segundos (Dispersión, Persecución)
-
-#escalamos el spritr de 15/16px al tamaño de la celda
-
-escala_personaje = tamano_celda / 15.0 
-
-factor_proyectar = tamano_celda // velocidad
-DEBUG = False  # Cambia a True cuando hagamos el debug
-
-# puerta spawn fantasmas
-# La puerta está bajo la fila 11 (fila 10 en índice 0), columnas 13 y 14.
-x_puerta = 13 * tamano_celda
-y_puerta = 11 * tamano_celda + 3 # Lo bajamos 3 píxeles para que se vea
-ancho_puerta = 2 * tamano_celda
+# Guardamos las coordenadas y dimensiones de la puerta del refugio de los fantasmas (las guardamos discretizadas)
+x_puerta = 13 * tamano_celda #columnas 13 y 14
+y_puerta = 11 * tamano_celda + 3 # fila 11 (lo bajamos 3 píxeles)
+ancho_puerta = 2 * tamano_celda 
 alto_puerta = 6
+
+# Fila en la que se encuentra el túnel del mapa (usado para la lógica de teletransporte)
 tunel = 13 # fila del túnel ajustada al offset
 
+# FÍSICAS Y RENDERIZADO ------------------
 
-# DICCIONARIO DE ANIMACIONES
-# Formato: 'clave': [(x, y, ancho, alto), (x, y, ancho, alto)...]
-# NOTA: Pon aquí los números reales que sacaste con el script buscador.
+# Regla fundamental: la velocidad debe ser divisor de 'tamano_celda' para que el personaje pueda alinearse perfectamente con las paredes al girar
+velocidad = 2 # (20 % 2 == 0)
+velocidad_asustados = 1 # los fantasmas asustados van a la mitad de velocidad
+FPS = 60 
+
+# Escalamos los sprites a nuestro tamaño de celda
+escala_personaje = tamano_celda / 15.0
+
+
+# Multiplicador para calcular cuántos pasos forman una celda entera en función de nuestra velocidad (usado en calcular_mejor_dir en controladores)
+factor_proyectar = tamano_celda // velocidad
+
+# Temporizador de la máquina de estados de los fantasmas (Dispersión <-> Persecución) 
+duraciones_oleada = [7, 20]
+
+# Activador del modo Debug: dibujado de rutas y objetivos 
+DEBUG = False
+
+# GRAFICADO (DICCIONARIO DE ANIMACIONES)
+
+color_fondo = (0, 0, 0)
+
+# Formato: 'clave': [(x, y, ancho, alto),...]
 PACMAN_COORDENADAS = {
     'quieto': [(0, 0, 16, 16)], 
     'derecha': [ 
@@ -83,12 +93,12 @@ FANTASMA_ROJO_COORDENADAS = {
 
 FANTASMA_ESTADOS_ESPECIALES = {
     'asustado_azul': [
-        (137, 68, 15, 15), # Azul frame 1
-        (154, 68, 15, 15)  # Azul frame 2
+        (137, 68, 15, 15), 
+        (154, 68, 15, 15)  
     ],
     'asustado_blanco': [
-        (171, 68, 15, 15), # Blanco frame 1 (parpadeo de aviso)
-        (188, 68, 15, 15)  # Blanco frame 2
+        (171, 68, 15, 15), 
+        (188, 68, 15, 15)  
     ],
     'ojos': {
         'derecha':   (137, 85, 15, 15),
@@ -98,7 +108,8 @@ FANTASMA_ESTADOS_ESPECIALES = {
     }
 }
 
-'''
+# MAPAS ---------------
+
 MAPA = [                        
     "1111111111111111111111111111",
     "1000000000000110000000000001",
@@ -130,8 +141,8 @@ MAPA = [
     "1000000000000000000000000001",
     "1111111111111111111111111111"
 ]
-'''
-MAPA = [ 
+
+MAPA2 = [ 
     "1111111111111111111111111111",
     "1            11            1",
     "1 1111 11111 11 11111 1111 1",
@@ -162,7 +173,6 @@ MAPA = [
     "1                          1",
     "1111111111111111111111111111"
 ]
-
 
 
 columnas_mapa = len(MAPA[0])

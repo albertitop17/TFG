@@ -32,7 +32,47 @@ class IA:
     def __init__(self):
         self.dx = 0
         self.dy = 0
-
+    def buscar_bolita_segura(self, nodo_origen, mapa_logico, mapa_peligro, bolitas_dis):
+        # Búsqueda de Costo Uniforme (Dijkstra Multi-meta)
+        frontera = []
+        # Guardamos: (coste_acumulado, nodo_actual, camino_hasta_aqui)
+        heapq.heappush(frontera, (0, nodo_origen, [nodo_origen])) 
+        visitados = {nodo_origen: 0}
+        direcciones = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+        
+        while frontera:
+            coste_g, actual, camino = heapq.heappop(frontera)
+            
+            # ¡LA MAGIA! Si el nodo que estamos pisando es una bolita, hemos terminado.
+            # Al usar Dijkstra, matemáticamente está garantizado que es la bolita más cercana y segura.
+            if actual in bolitas_dis:
+                return camino
+                
+            for dx, dy in direcciones:
+                next_x = actual[0] + dx
+                next_y = actual[1] + dy
+                ancho_mapa = len(mapa_logico[0])
+                
+                # --- INTEGRACIÓN DE PORTALES ---
+                if actual[1] == constantes.tunel:
+                    if actual[0] == 0 and dx == -1: next_x = ancho_mapa - 1
+                    elif actual[0] == ancho_mapa - 1 and dx == 1: next_x = 0
+                        
+                siguiente = (next_x, next_y)
+                
+                if 0 <= siguiente[1] < len(mapa_logico) and 0 <= siguiente[0] < ancho_mapa:
+                    if mapa_logico[siguiente[1]][siguiente[0]] != "1": # No es muro
+                        
+                        # El coste de dar el paso incluye el "aura radiactiva" de los fantasmas
+                        coste_paso = 1 + mapa_peligro.get(siguiente, 0)
+                        nuevo_coste = coste_g + coste_paso
+                        
+                        if siguiente not in visitados or nuevo_coste < visitados[siguiente]:
+                            visitados[siguiente] = nuevo_coste
+                            heapq.heappush(frontera, (nuevo_coste, siguiente, camino + [siguiente]))
+                            
+        return [] # No hay camino seguro posible (Pac-Man está 100% atrapado)
+    
     def obtener_movimiento(self, rect_actual, muros, objetivo=None, lista_fantasmas=None, mapa_logico=None, bolitas=None, **kwargs):
         
         # Si no me pasan bolitas o mapa, no puedo hacer A*, me quedo quieto
@@ -47,6 +87,32 @@ class IA:
         y_discretizada = (rect_actual.centery - constantes.offset_y_mapa) // constantes.tamano_celda
         nodo_origen = (x_discretizada, y_discretizada)
 
+
+        
+        mapa_peligro = {}
+        # precalculamos las posiciones discretas de los fantasmas (con un set para que 'in' sea de tiempo 0(1)) 
+        posiciones_fantasmas = set()
+        if lista_fantasmas:
+            for f in lista_fantasmas:
+                # Discretizamos sus posiciones igual que con Pac-Man
+                fantasma_dis_x = f.forma.centerx // constantes.tamano_celda
+                fantasma_dis_y = (f.forma.centery - constantes.offset_y_mapa) // constantes.tamano_celda
+                #generamos un rombo de peligro al rededor 
+                for dx in range(-3, 4):
+                    for dy in range(-3, 4):
+                        distancia = abs(dx) + abs(dy)
+                        if distancia <= 3: # Si está dentro del radio de peligro
+                            nx, ny = fantasma_dis_x + dx, fantasma_dis_y + dy
+                            penalizacion = 0
+                            if distancia == 0: penalizacion = 5000
+                            elif distancia == 1: penalizacion = 2000
+                            elif distancia == 2: penalizacion = 1000
+                            elif distancia == 3: penalizacion = 5000
+                            
+                            # Si se solapan auras de varios fantasmas, nos quedamos con el peligro más alto
+                            mapa_peligro[(nx, ny)] = max(mapa_peligro.get((nx, ny), 0), penalizacion)
+
+    
         # 3 - Encontramos la bolita más cercana (Distancia Manhattan en píxeles)
         #meta_bolita = min(bolitas, key=lambda bolita: abs(rect_actual.centerx - bolita.centerx) + abs(rect_actual.centery - bolita.centery)) # NO VALE 
         #pero no debería haber demasiadas en pantalla a la vez. Si fuera un problema, podríamos optimizarlo con una estructura espacial.
@@ -54,6 +120,7 @@ class IA:
         ancho_px = constantes.columnas_mapa * constantes.tamano_celda
         y_tunel_px = (constantes.tunel * constantes.tamano_celda) + constantes.offset_y_mapa #fila del tunel
         
+    
         meta_bolita = min( #busqueda greedy con la distancia de portales O(nº bolitas restantes)
             bolitas, 
             key=lambda b: self.distancia_con_portales(
@@ -62,6 +129,25 @@ class IA:
                 ancho_px, y_tunel_px
             )
         )
+        
+        
+        def coste_utilidad_bolita(bolita):
+            dist_pacman = self.distancia_con_portales(
+                rect_actual.centerx, rect_actual.centery, 
+                bolita.centerx, bolita.centery, 
+                ancho_px, y_tunel_px
+            )
+            
+            # Consultamos el peligro EXACTO de la casilla donde está la bolita
+            bx = bolita.x // constantes.tamano_celda
+            by = (bolita.y - constantes.offset_y_mapa) // constantes.tamano_celda
+            
+            # Multiplicamos la penalización para que sea repulsiva frente a la distancia
+            peligro_casilla = mapa_peligro.get((bx, by), 0) * 100 
+            
+            return dist_pacman + peligro_casilla
+
+        meta_bolita = min(bolitas, key=coste_utilidad_bolita)
         # 4 - Meta matemática (IMPORTANTE EL OFFSET EN Y PARA QUE APUNTE AL LUGAR REAL DEL MAPA)
         # Usamos .x y .y de la bolita que son las esquinas superiores izquierdas (mejor centrex?)
         bolita_dis_x = meta_bolita.x // constantes.tamano_celda  #necesitamos hacer la división entera para obtener la coordenada de la cuadrícula
@@ -69,7 +155,7 @@ class IA:
         bolita_dis = (bolita_dis_x, bolita_dis_y)
 
         # 5 - Aplicamos el Algoritmo A* weighted (con peso de los fantasmas)
-        camino = self.a_star_search(nodo_origen, bolita_dis, mapa_logico, lista_fantasmas)
+        camino = self.a_star_search(nodo_origen, bolita_dis, mapa_logico, lista_fantasmas, mapa_peligro)
 
         # 6 - Traducir el siguiente nodo del camino en velocidades físicas (dx, dy)
         if camino and len(camino) > 1:
@@ -100,7 +186,12 @@ class IA:
             self.dx, self.dy = 0, 0 # hemos llegado o no hay camino
         return self.dx, self.dy
 
-    def a_star_search(self, nodo_origen, meta, mapa_logico, lista_fantasmas):
+
+
+
+
+
+    def a_star_search(self, nodo_origen, meta, mapa_logico, lista_fantasmas, mapa_peligro):
         #Implementació de A* Graph Search 
         #Devuelve una lista de nodos (tuplas) desde 'start' hasta 'goal'.
         
@@ -111,14 +202,8 @@ class IA:
         visitados = {nodo_origen: 0}
         # Direcciones posibles: (dx, dy) en la cuadrícula (discretizada)
         direcciones = [(0, -1), (0, 1), (-1, 0), (1, 0)]
-        # precalculamos las posiciones discretas de los fantasmas (con un set para que 'in' sea de tiempo 0(1)) 
-        posiciones_fantasmas = set()
-        if lista_fantasmas:
-            for f in lista_fantasmas:
-                # Discretizamos sus posiciones igual que con Pac-Man
-                fantasma_dis_x = f.forma.centerx // constantes.tamano_celda
-                fantasma_dis_y = (f.forma.centery - constantes.offset_y_mapa) // constantes.tamano_celda
-                posiciones_fantasmas.add((fantasma_dis_x, fantasma_dis_y))
+
+       
         #hasta que no tengamos nodos para explorar
         while frontera:
             # popeamos el nodo con menor f(n) de la frontera
@@ -150,8 +235,10 @@ class IA:
                     if celda != "1":  # no es un muro
                         coste_paso = 1
                         # Si en el nodo destino hay un fantasma, el coste se dispara.
-                        if siguiente in posiciones_fantasmas:
-                            coste_paso += 1000
+                        #if siguiente in posiciones_fantasmas:
+                        coste_paso = 1 + mapa_peligro.get(siguiente, 0)
+                        
+                        #    coste_paso += 1000
                         nuevo_coste_g = g_n + coste_paso  # c(s, a, s') = 1 si no hay fantasma, 1001 si hay fantasma
                         # Graph Search: Comprobar si el nodo ya se ha visitado y si el nuevo camino es más barato
                         if siguiente not in visitados or nuevo_coste_g < visitados[siguiente]:
