@@ -1,8 +1,8 @@
-"""
+'''
 Configuración y constantes del juego Pacman.
 Agrupamos variables estátricas como dimensiones, velocidades, coordenadas de sprites, etc. 
 En caso de querer modificar una variable, solo se tendrá que cambiar aquí.
-"""
+'''
 
 # DIMENSIONES Y CUADRÍCULA ------------
 
@@ -53,7 +53,7 @@ DEBUG = False
 
 color_fondo = (0, 0, 0)
 
-# Formato: 'clave': [(x, y, ancho, alto),...]
+# Formato: 'clave': [(x, y, ancho, alto),...] del Sprite Sheet
 PACMAN_COORDENADAS = {
     'quieto': [(0, 0, 16, 16)], 
     'derecha': [ 
@@ -108,7 +108,7 @@ FANTASMA_ESTADOS_ESPECIALES = {
     }
 }
 
-# MAPAS ---------------
+# Matrices de mapas: 0 = Bolita, 1 = Muro, 2 = Super-Bolita, " " = Túnel
 
 MAPA = [                        
     "1111111111111111111111111111",
@@ -173,7 +173,6 @@ MAPA2 = [
     "1                          1",
     "1111111111111111111111111111"
 ]
-
 
 columnas_mapa = len(MAPA[0])
 filas_mapa = len(MAPA)
