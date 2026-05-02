@@ -73,7 +73,7 @@ class IA:
                             
         return [] # No hay camino seguro posible (Pac-Man está 100% atrapado)
     
-    def obtener_movimiento(self, rect_actual, muros, objetivo=None, lista_fantasmas=None, mapa_logico=None, bolitas=None, **kwargs):
+    def obtener_movimiento(self, rect_actual = None, muros = None, objetivo=None, lista_fantasmas=None, mapa_logico=None, bolitas=None, **kwargs):
         
         # Si no me pasan bolitas o mapa, no puedo hacer A*, me quedo quieto
         if not bolitas or not mapa_logico:

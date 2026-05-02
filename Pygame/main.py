@@ -24,7 +24,7 @@ class Game:
 
         #PACMAN
         self.spawn_pacman = (13 * constantes.tamano_celda, 24 * constantes.tamano_celda) #para luego respawnear
-        self.jugador = Pacman(x = self.spawn_pacman[0], y = self.spawn_pacman[1], imagen_entera = sprite, controlador = controladores.IA()) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
+        self.jugador = Pacman(x = self.spawn_pacman[0], y = self.spawn_pacman[1], imagen_entera = sprite, controlador = controladores.Humano()) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
 
         # Lista de fantasmas: (x, y, color, cerebro)
         centro_x = 13 * constantes.tamano_celda
