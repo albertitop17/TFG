@@ -134,7 +134,7 @@ MAPA = [
     "     1011          1101     ",
     "     1011 111  111 1101     ",
     "111111011 1      1 110111111",
-    " 0     0  1      1  0     0 ",
+    " 0    0   1      1   0    0 ",
     "111111011 1      1 110111111",
     "     1011 11111111 1101     ",
     "     1011          1101     ",
@@ -186,3 +186,5 @@ MAPA2 = [
 
 columnas_mapa = len(MAPA[0])
 filas_mapa = len(MAPA)
+ancho_px = columnas_mapa * tamano_celda
+y_tunel_px = (tunel * tamano_celda) + offset_y_mapa

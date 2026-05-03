@@ -120,7 +120,7 @@ class Fantasma(EnteFisico):
                 interfaz.blit(texto, (pos[0] + 10, pos[1] + 15))
                 pygame.draw.rect(interfaz, (255, 255, 255), (pos[0], pos[1], constantes.tamano_celda, constantes.tamano_celda), 1)
 
-        # Modo 2: Mostramos una simulación predictiva de la ruta que van a seguir (3 pasos delante)
+        # Modo 2: Mostramos una simulación predictiva de la ruta que van a seguir (4 pasos delante)
         elif modo_debug == 2 and hasattr(self.controlador, 'ruta_debug') and self.controlador.ruta_debug:
             ruta = self.controlador.ruta_debug
 
