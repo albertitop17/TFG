@@ -255,8 +255,7 @@ class Game:
         for i, fantasma in enumerate(self.fantasmas):
             fantasma.forma.x, fantasma.forma.y = posiciones_fantasmas[i]
             fantasma.controlador.estado = "dispersion" # Vuelven al estado inicial de oleada
-            # Bloqueamos a todos menos a Blinky (índice 0)
-            # El update los volverá a liberar rápidamente si ya tienen bolitas suficientes
+            # El update los volverá a liberar rápidamente si ya se comieron bolitas suficientes
             fantasma.controlador.liberado = self.bolitas_comidas >= self.bolitas_para_liberarse[i]
             fantasma.controlador.dx = 0 # Reset memoria cerebro
             fantasma.controlador.dy = 0
