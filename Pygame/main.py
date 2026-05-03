@@ -54,6 +54,7 @@ class Game:
         self.modo_global = "dispersion" # El juego empieza siempre en dispersión
         self.tiempo_cambio_modo = pygame.time.get_ticks()
         self.duraciones_oleada = constantes.duraciones_oleada  # Tiempos en segundos: [Tiempo Dispersión, Tiempo Persecución]
+        self.bolitas_para_liberarse = constantes.bolitas_para_liberarse
 
         self.modo_debug = 0 # 0: Apagado, 1: Valores (Cajas), 2: Ruta (Prediccion siguientes pasos) 
 
@@ -102,7 +103,11 @@ class Game:
             self.mapa.bolitas.pop(indice_bolita) # La eliminamos también visualmente
             self.puntuacion += 10
             self.bolitas_comidas += 1
-            # (¡Aquí irá la lógica de liberar fantasmas más adelante!)
+
+            for i, fantasma in enumerate(self.fantasmas):
+                # Si está bloqueado y ya hemos comido suficientes bolitas, lo liberamos
+                if not fantasma.controlador.liberado and self.bolitas_comidas >= self.bolitas_para_liberarse[i]:
+                    fantasma.controlador.liberado = True
 
         indice_super = self.jugador.forma.collidelist(self.mapa.super_bolitas)
         if indice_super != -1:
@@ -121,15 +126,22 @@ class Game:
         tiempo_actual = pygame.time.get_ticks()
         if self.tiempo_asustado > 0:
             tiempo_transcurrido = (tiempo_actual - self.tiempo_asustado) // 1000
-            if tiempo_transcurrido >= 8: # Si ya han transcurrido los 8 segundos del susto
+            
+            # Activamos el parpadeo en los últimos 3 segundos
+            parpadeo_activo = (5 <= tiempo_transcurrido < 8)
+            for fantasma in self.fantasmas:
+                fantasma.aviso_fin_asustado = parpadeo_activo
+
+            # Si ya han transcurrido los 8 segundos del susto volvemos al estado normal de perseguir
+            if tiempo_transcurrido >= 8: 
                 self.tiempo_asustado = 0
                 for fantasma in self.fantasmas:
                     if fantasma.controlador.estado == "asustado":
                         # Volvemos al estado normal
                         fantasma.controlador.estado = "perseguir"
+                        fantasma.aviso_fin_susto = False
                         # Les devolvemos la velocidad normal y giran 180º
                         # En caso de que por reducir la velocidad se quedasen en un pixel impar les obligamos a moverse a uno par
-                        vel = constantes.velocidad
                         self.forzar_giro_180(fantasma, constantes.velocidad, invertir=False)
                         self.sincronizar_cuadricula(fantasma)
     
@@ -145,6 +157,7 @@ class Game:
             if hitbox_pacman.colliderect(hitbox_fantasma): 
                 if fantasma.controlador.estado == "asustado":
                     fantasma.controlador.estado = "ojos"
+                    fantasma.aviso_fin_susto = False
                     self.puntuacion += 200
                     pygame.time.delay(500) # Pausa al comerse un fantasma (habrá que añadir efectos visuales)
                     #volvemos a sincronizarlo a pixel par
@@ -242,9 +255,12 @@ class Game:
         for i, fantasma in enumerate(self.fantasmas):
             fantasma.forma.x, fantasma.forma.y = posiciones_fantasmas[i]
             fantasma.controlador.estado = "dispersion" # Vuelven al estado inicial de oleada
-            fantasma.controlador.dx = constantes.velocidad # Reset memoria cerebro
+            # Bloqueamos a todos menos a Blinky (índice 0)
+            # El update los volverá a liberar rápidamente si ya tienen bolitas suficientes
+            fantasma.controlador.liberado = self.bolitas_comidas >= self.bolitas_para_liberarse[i]
+            fantasma.controlador.dx = 0 # Reset memoria cerebro
             fantasma.controlador.dy = 0
-            fantasma.dx = constantes.velocidad # Reset velocidad física
+            fantasma.dx = 0 # Reset velocidad física
             fantasma.dy = 0
 
         # reseteamos el sistema de oleadas (dispersión/persecución) 

@@ -46,6 +46,9 @@ factor_proyectar = tamano_celda // velocidad
 # Temporizador de la máquina de estados de los fantasmas (Dispersión <-> Persecución) 
 duraciones_oleada = [7, 20]
 
+# Bolitas necesarias para liberar a  [Blinky, Pinky, Inky, Clyde] al incio del juego
+bolitas_para_liberarse = [0, 5, 15, 20]
+
 # Activador del modo Debug: dibujado de rutas y objetivos 
 DEBUG = False
 

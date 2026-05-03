@@ -29,12 +29,19 @@ class Fantasma(EnteFisico):
         self.frames_asustado = [
             escalar_imagen(imagen_entera.subsurface(coords), constantes.escala_personaje)
             for coords in constantes.FANTASMA_ESTADOS_ESPECIALES['asustado_azul']  ]
+        # Fantasma asustado (blanco)
+        self.frames_asustado_blanco = [
+            escalar_imagen(imagen_entera.subsurface(coords), constantes.escala_personaje)
+            for coords in constantes.FANTASMA_ESTADOS_ESPECIALES['asustado_blanco']  ]
         # Ojos del fantasma (cuando es comido)
         self.frames_ojos = {
             direccion: escalar_imagen(imagen_entera.subsurface(coords), constantes.escala_personaje)
             for direccion, coords in constantes.FANTASMA_ESTADOS_ESPECIALES['ojos'].items()  }
 
+        self.aviso_fin_asustado = False # Variable para decirle al fantasma que su tiempo de "asustado" se acaba
+
         self.imagen = self.frames['derecha'][0] # Inicializamos la imagen con el primer frame de animación
+        
 
     def actualizar_animacion(self):
         '''
@@ -47,8 +54,8 @@ class Fantasma(EnteFisico):
         if self.dx > 0: direccion_visual = 'derecha'
         elif self.dx < 0: direccion_visual = 'izquierda'
         elif self.dy > 0: direccion_visual = 'abajo'
-        elif self.dy < 0: direccion_visual = 'arriba'
-        else: return # Si dx,dy==0 (chocado), mantenemos la animación actual (no debería darse)
+        else: direccion_visual = 'arriba'
+        
             
          # Animaciones por frame
         cooldown_animaciones = constantes.cooldown_animaciones # Tiempo transcurrido entre el cambio de fotograma (120 ms)
@@ -69,7 +76,12 @@ class Fantasma(EnteFisico):
             if tiempo_actual - self.frame_tiempo > cooldown_animaciones:
                 self.frame_tiempo = tiempo_actual
                 self.frame_index = (self.frame_index + 1) % len(self.frames_asustado)
-            self.imagen = self.frames_asustado[self.frame_index]
+                
+            # Si tenemos el aviso activado y la división del tiempo es par (cambia cada 200ms)
+            if self.aviso_fin_asustado and (tiempo_actual // 200) % 2 == 0:
+                self.imagen = self.frames_asustado_blanco[self.frame_index]
+            else:
+                self.imagen = self.frames_asustado[self.frame_index]
 
         elif estado == "ojos":
             # Los ojos no tienen animación de fotogramas, solo cambian si giran

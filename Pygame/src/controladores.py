@@ -219,7 +219,7 @@ class ControladorFantasmaPadre:
         self.dy = 0
 
         self.estado = "dispersion" # Estados posibles: "perseguir", "asustado", "ojos", "dispersion"
-        self.liberado = True # Variable para gestionar la salida de los fantasmas progresivamente (Aún no implementado)
+        self.liberado = False # Variable para gestionar la salida de los fantasmas progresivamente 
 
         self.offset_filas = constantes.offset_y_mapa // constantes.tamano_celda # Para ajustarnos a la posición real del mapa
 
@@ -463,6 +463,7 @@ class CerebroBlinky(ControladorFantasmaPadre):
 
     def __init__(self):
         super().__init__()
+        self.liberado = True
         self.meta_dispersion = (26 * constantes.tamano_celda, self.offset_filas * constantes.tamano_celda)
 
     def tomar_decision(self, direcciones_validas, rect_actual, jugador, muros, lista_fantasmas = None):
