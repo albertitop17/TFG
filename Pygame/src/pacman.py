@@ -3,53 +3,77 @@ from src import constantes
 from src.fisica import EnteFisico
 
 def escalar_imagen(imagen, escala):
+    '''
+    Función auxiliar para escalar el sprite sheet.
+    Precalcularemos la imagen escalada para que no se realice en el bucle del juego
+    '''
     ancho = int(imagen.get_width() * escala)
     alto = int(imagen.get_height() * escala)
     return pygame.transform.scale(imagen, (ancho, alto))
 
 class Pacman(EnteFisico):
+    '''
+    Ente controlado por el jugador o por la IA.
+    Hereda todo el motor físico de la clase EnteFísico y la expande con su correspondiente renderizado.
+    Mediante su correspondiente sub-sprite realiza las animaciones a tiempo real. 
+    '''
     def __init__(self, x, y, imagen_entera, controlador):
-        super().__init__(x, y, controlador) #llamamos a la fisica del padre
+        # Inicializamos la hitbox y las variables vectoriales de la clase padre
+        super().__init__(x, y, controlador) 
         
-        self.sprite = imagen_entera
-        self.frame_index = 0 #para controlar el frame de animacion
-        self.frame_tiempo = pygame.time.get_ticks() #almacenamos el tiempo actual para controlar la velocidad de la animacion
-        self.rotate = 0
+        self.sprite = imagen_entera 
+        self.frame_index = 0 # variable para controlar el frame de animación
+        self.frame_tiempo = pygame.time.get_ticks() #almacenamos el tiempo actual para controlar la velocidad de la animación
+        self.rotate = 0 # Ángulo de rotación de la animación (en grados)
 
+        # Para optimizar memoria y rendimiento, extraemos del sprite las coordenadas de la imagen y las escalamos 1 sola vez al 
+        # instanciar el objeto Pacman.
         self.frames = [escalar_imagen(imagen_entera.subsurface(coordenadas), constantes.escala_personaje) 
-                       for coordenadas in constantes.PACMAN_COORDENADAS['derecha']] #preprocesamos los frames de animacion para no tener que recortarlos y escalarlos cada vez que actualizamos la animacion
-        self.imagen = self.frames[0] #inicializamos la imagen del personaje con el primer frame de animacion
-
+                       for coordenadas in constantes.PACMAN_COORDENADAS['derecha']] 
+        self.imagen = self.frames[0] # Inicializamos la imagen con el primer frame de animación
 
     def actualizar_animacion(self):
-        if self.dx == 0 and self.dy == 0: #para que mantenga la orientacion cuando no se mueve
-            pass
+        '''
+        Actualiza la imagen del sprite separado en 2 lógicas:
+        - Primero mediante rotaciones giramos el personaje en función de su dirección
+        - Luego realizamos un ciclo de animaciones de la boca del personaje mediante el reloj interno
+        '''
+        # Calculamos la orientación (podríamos usar los ditintos sprites en vez de girar este)
+        if self.dx == 0 and self.dy == 0: #
+            pass # Si está frente a un muro quieto, mantiene su orientación 
         elif self.dx < 0:
-            self.rotate = 180
+            self.rotate = 180 # Izquierda
         elif self.dx > 0:
-            self.rotate = 0
+            self.rotate = 0 # Derecha
         elif self.dy < 0:
-            self.rotate = 90
+            self.rotate = 90 # Arriba (En las coordenadas de Pygame, la Y decrece al subir)
         else:
-            self.rotate = 270
+            self.rotate = 270 # Abajo
 
-        #(podriamos añadir un string de direccion) #direccion es un string que indica la direccion del movimiento del personaje
-        cooldown_animaciones = 120 #tiempo en ms entre cada cambio de frame
+        # Animaciones por frame
+        cooldown_animaciones = 120 # Tiempo transcurrido entre el cambio de fotograma (120 ms)
         tiempo_actual = pygame.time.get_ticks()
         
-        if tiempo_actual - self.frame_tiempo > cooldown_animaciones: #cambiar de frame cada 100 ms
+        # Si la diferencia entre el tiempo actual y el último registro supera nuestro 'cooldown' actualizamos la animación 
+        if tiempo_actual - self.frame_tiempo > cooldown_animaciones: 
             self.frame_tiempo = tiempo_actual
             self.frame_index = (self.frame_index + 1) % len(self.frames)
 
-        # Sin escalar en cada frame: usamos el frame ya pre-escalado
+        # Actualizamos la imagen actual desde el banco de imagenes precargado 
         self.imagen = self.frames[self.frame_index]
 
     def dibujar(self, interfaz, modo_debug = 0): #donde lo queremos dibujar, no hace falta que sea la misma ventana
+        '''
+        Aplica las transformaciones geométricas y ejecuta el Bit-Bilt hacia la pantalla principal
+        '''
+        # Añadimos erramientas visuales para el modo DEBUG (para poder ver visualmente los objetivos de los fantasmas)
         if modo_debug == 1:
             radio_miedo = 8 * constantes.tamano_celda
             color_naranja = (255, 184, 82)
-            # Dibujamos la circunferencia del miedo de Clyde centrada en Pac-Man
+            # Dibujamos la circunferencia del miedo de Clyde centrada en Pac-Man 
             pygame.draw.circle(interfaz, color_naranja, self.forma.center, radio_miedo, 1)
 
-        imagen_dr = pygame.transform.rotate(self.imagen, self.rotate)
-        interfaz.blit(imagen_dr, self.forma) #dibujar la imagen del personaje en la posicion y tamaño del rectangulo
+        imagen_dr = pygame.transform.rotate(self.imagen, self.rotate) # se podría usar distintas sub-superficies del sprite (como en los fantasmas)
+        
+        # Dibujamos a Pacman superponiendo la imagen sobre su hitbox
+        interfaz.blit(imagen_dr, self.forma) 

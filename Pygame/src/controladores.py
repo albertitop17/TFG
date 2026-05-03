@@ -71,7 +71,8 @@ class IA:
                             visitados[siguiente] = nuevo_coste
                             heapq.heappush(frontera, (nuevo_coste, siguiente, camino + [siguiente]))
                             
-        return [] # No hay camino seguro posible (Pac-Man está 100% atrapado)
+        return [] # No hay camino seguro posible (Pac-Man está 100% atrapado
+    
     
     def obtener_movimiento(self, rect_actual = None, muros = None, objetivo=None, lista_fantasmas=None, mapa_logico=None, bolitas=None, **kwargs):
         

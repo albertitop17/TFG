@@ -105,12 +105,12 @@ class EnteFisico:
         # Implementamos la mecánica de teletransporte en los túneles
         if self.forma.left < 0: #si el personaje se sale por la izquierda
             self.forma.right = dimensiones[0] 
-        if self.forma.right > dimensiones[0]: #si el personaje se sale por la derecha
+        elif self.forma.right > dimensiones[0]: #si el personaje se sale por la derecha
             self.forma.left = 0
         
-        # if self.forma.top < 0: #si el personaje se sale por arriba
+        # elif self.forma.top < 0: #si el personaje se sale por arriba
         #     self.forma.bottom = dimensiones[1]
-        # if self.forma.bottom > dimensiones[1]: #si el personaje se sale por abajo
+        # elif self.forma.bottom > dimensiones[1]: #si el personaje se sale por abajo
         #     self.forma.top = 0
 
     # Funciones vacías que serán sobrescritas las clases hijas (Pacman y Fantasma)
