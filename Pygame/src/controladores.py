@@ -44,8 +44,6 @@ class IA:
     def __init__(self):
         self.dx = 0
         self.dy = 0
-
-   
     
     def obtener_movimiento(self, rect_actual = None, muros = None, objetivo=None, lista_fantasmas=None, mapa_logico=None, bolitas=None, **kwargs):
         

@@ -51,8 +51,6 @@ DEBUG = False
 
 # GRAFICADO (DICCIONARIO DE ANIMACIONES)
 
-color_fondo = (0, 0, 0)
-
 colores_debug = {
         'rojo': (255, 0, 0),
         'rosa': (255, 184, 255),

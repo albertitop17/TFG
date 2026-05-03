@@ -20,10 +20,8 @@ def camino_esta_libre(rect_actual, dx, dy, muros):
     rect_prueba.x += dx
     rect_prueba.y += dy
 
-    for muro in muros:
-        if rect_prueba.colliderect(muro):
-            return False 
-    return True
+    return rect_prueba.collidelist(muros) == -1 # Si devuelve -1 es que no ha encontrado ningún muro
+    
 
 class EnteFisico:
     '''

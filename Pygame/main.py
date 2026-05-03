@@ -7,90 +7,99 @@ from src.mapa import Mapa
 
 DEBUG = constantes.DEBUG
 class Game:
+    '''
+    Clase Principal (Motor del juego)
+    Controla el bucle del juego, instanciando las entidades, gestionando colisiones y actuando como máquina de estados (dispersion <-> perseguir)
+    '''
     def __init__(self):
         
-        # Inicializar Pygame------------------------------------
+        # Inicializamos el motor de Pygame
         pygame.init()
-        #crear la ventana del juego-------------------------------
-        self.pantalla = pygame.display.set_mode((constantes.ancho_ventana , constantes.alto_ventana ))
-        pygame.display.set_caption("Pacman") #titulo de la ventana
-
-        self.reloj = pygame.time.Clock() #para controlar los fps
+        self.pantalla = pygame.display.set_mode((constantes.ancho_ventana , constantes.alto_ventana )) # Creamos la ventana del juego
+        pygame.display.set_caption("TFG Pacman") # Título de la ventana
+        self.reloj = pygame.time.Clock() # Para controlar los FPS
         self.run = True
 
-        # Creamos el mapa y los jugadores --------------------------------------------------
+        # Creamos el Mapa y las Entidades
         sprite = pygame.image.load("assets//graficos//sheet_pacman_personajes.png").convert_alpha()
-        self.mapa = Mapa() #crear el mapa 
 
-        #PACMAN
-        self.spawn_pacman = (13 * constantes.tamano_celda, 24 * constantes.tamano_celda) #para luego respawnear
-        self.jugador = Pacman(x = self.spawn_pacman[0], y = self.spawn_pacman[1], imagen_entera = sprite, controlador = controladores.Humano()) #crear el objeto jugador (se encargara de dibujarse bien en la clase Personaje)
+        # Mapa
+        self.mapa = Mapa() 
 
-        # Lista de fantasmas: (x, y, color, cerebro)
+        # Pacman
+        self.spawn_pacman = (13 * constantes.tamano_celda, 24 * constantes.tamano_celda) # Guardamos la variable para luego poder reaparecer
+        self.jugador = Pacman(x = self.spawn_pacman[0], y = self.spawn_pacman[1], imagen_entera = sprite, controlador = controladores.Humano()) 
+
+        # Fantasmas: Lista de fantasmas: (x, y, color, cerebro)
         centro_x = 13 * constantes.tamano_celda
         self.fantasmas = [
-            Fantasma(x=centro_x     , y=14 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroBlinky(), color='rojo'),
+            Fantasma(x=centro_x     , y=13 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroBlinky(), color='rojo'),
             Fantasma(x=centro_x - 40, y=17 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroPinky(), color='rosa'),
             Fantasma(x=centro_x     , y=17 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroInky(), color='azul'),
             Fantasma(x=centro_x + 40, y=17 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroClyde(), color='naranja'),
         ]
         
-
+        # Variables de Estado Lógico
         self.vidas = 6
         self.puntuacion = 0
-        self.bolitas_comidas = 0 #para liberar al inici a los fantasmas
+        self.bolitas_comidas = 0 # Para liberar al incio a los fantasmas
         self.game_over = False
 
-        #para escribir texto
-        pygame.font.init() #¿?¿?¿?¿?
+        # Interfaz y Tipografía
+        pygame.font.init() # inicializamos las fuentes por si acaso (aunque pygame.init() debería hacerlo)
         self.fuente_marcador = pygame.font.SysFont("Arial", 24, bold=True)
 
-        self.tiempo_asustado = 0 #contador para el modo asustado
-
+        # Controladores de tiempo
+        self.tiempo_asustado = 0 # Se usará como temporizador para alternar las oleadas de dispersión y perseguir
         self.modo_global = "dispersion" # El juego empieza siempre en dispersión
         self.tiempo_cambio_modo = pygame.time.get_ticks()
-        # Tiempos en segundos: [Tiempo Dispersión, Tiempo Persecución]
-        self.duraciones_oleada = constantes.duraciones_oleada
+        self.duraciones_oleada = constantes.duraciones_oleada  # Tiempos en segundos: [Tiempo Dispersión, Tiempo Persecución]
 
         self.modo_debug = 0 # 0: Apagado, 1: Valores (Cajas), 2: Ruta (Prediccion siguientes pasos) 
 
     def eventos(self):
-        for evento in pygame.event.get(): #registrar eventos que ocurren en el juego
-            if evento.type == pygame.QUIT: #si se cierra la ventana (o alt+F4)
+        '''
+        Gestiona los eventos de E/S
+        '''
+        for evento in pygame.event.get(): # Registramos los eventos (de E/S)
+            if evento.type == pygame.QUIT: # Si se cierra la ventana (o alt+F4) finalizamos el bucle del juego
                 self.run = False
-            # habría que añadir alguna forma para cambiar de tipo de cerebro, humano o ia
-            if evento.type == pygame.KEYDOWN:
-                if evento.key == pygame.K_SPACE:
-                    self.jugador.controlador = controladores.IA()
-                    print("IA")
-                if evento.key == pygame.K_0:
+            if evento.type == pygame.KEYDOWN: # Evento -> presionamos una tecla
+
+                if evento.key == pygame.K_SPACE: # El espacio sirve para alternar el cerebro de Pacman entre la IA o ser controlado por el jugador
+                    if isinstance(self.jugador.controlador, controladores.IA):
+                        self.jugador.controlador = controladores.Humano()
+                        print("Pac-Man controlado por el Jugador")
+                    elif isinstance(self.jugador.controlador, controladores.Humano):
+                        self.jugador.controlador = controladores.IA()
+                        print("Pac-Man controlado por la IA (A*)")
+
+                if evento.key == pygame.K_0: # Solo por prueba: Pulsando el 0 podemos controlar a Blinky manualmente (podríamos usar otras teclas)
                     self.fantasmas[0].controlador = controladores.Humano()
-                if evento.key == pygame.K_d:
-                    # Alternar entre 0, 1 y 2
+
+                if evento.key == pygame.K_d: # Puslando la tecla 'd' alternamos entre los 3 estados del debug: 0, 1 y 2
                     self.modo_debug = (self.modo_debug + 1) % 3
-                    #Avisamos a todos los cerebros del nuevo modo
                     for f in self.fantasmas:
                         if hasattr(f.controlador, 'modo_debug'):
                             f.controlador.modo_debug = self.modo_debug
                    
     def update(self):
-        #actualizamos el movimiento (le decimos que lo tiene que hacer, el cómo lo sabrá el) 
+        '''
+        Núcleo del juego. 
+        Actualiza el movimiento, trata las colisiones y gestiona las oleadas de los fantasmas (dispersión <-> perseguir). 
+        '''
+        if self.game_over:
+            return # Por ahora si acaba la partida congelamos todo. Tendremos que añadir animaciones
+        
         dimensiones = (constantes.ancho_ventana , constantes.alto_ventana)
-        self.jugador.actualizar(
-            dimensiones=(constantes.ancho_ventana, constantes.alto_ventana), 
-            muros=self.mapa.muros, 
-            objetivo=None, # De momento no pasamos fantasmas a A*
-            lista_fantasmas=self.fantasmas, # Pasamos la lista completa de fantasmas para que pueda evitarlos
-            mapa_logico=self.mapa.matriz, # << Tienes que exponer la matriz MAPA de mapa.py
-            bolitas=self.mapa.bolitas   # << Las bolitas actuales para buscar el objetivo
-        )
 
-        #Mecánica de comer bolitas: comprobamos si el rectángulo del jugador colisiona con alguna bolita o super-bolita
-        # collidelist devuelve el índice del elemento con el que chocamos, o -1 si no chocamos con nada
+        # Actualizamos a Pacman ------------------------
+        self.jugador.actualizar(dimensiones=dimensiones, muros=self.mapa.muros, lista_fantasmas=self.fantasmas, mapa_logico=self.mapa.matriz, bolitas=self.mapa.bolitas)
+
+        # Mecánica de comer bolitas: comprobamos si el rectángulo del jugador colisiona con alguna bolita
         indice_bolita = self.jugador.forma.collidelist(self.mapa.bolitas)
         if indice_bolita != -1:
-            # Eliminamos la bolita de la lista (desaparece visual y físicamente)
-            self.mapa.bolitas.pop(indice_bolita)
+            self.mapa.bolitas.pop(indice_bolita) # La eliminamos también visualmente
             self.puntuacion += 10
             self.bolitas_comidas += 1
             # (¡Aquí irá la lógica de liberar fantasmas más adelante!)
@@ -100,65 +109,51 @@ class Game:
             self.mapa.super_bolitas.pop(indice_super)
             self.puntuacion += 50
             
-            # activamos el modo asustado en los fantasmas
+            # Activamos el modo asustado en los fantasmas
             self.tiempo_asustado = pygame.time.get_ticks()
-            for fantasma in self.fantasmas:
-                # Solo les damos la vuelta si estaban persiguiendo (si son "ojos" no se inmutan)
-                if fantasma.controlador.estado in ["perseguir", "dispersion"]:
-                    fantasma.controlador.estado = "asustado" #tienen que dar la vuelta 180º y reducir su velocidad
-                    # frenado y giro 180º (forzamos la velocidad a magnitud 1 en sentido contrario)
-                    # velocidad física del ente 
-                    if fantasma.dx != 0: fantasma.dx = -constantes.velocidad_asustados if fantasma.dx > 0 else constantes.velocidad_asustados
-                    if fantasma.dy != 0: fantasma.dy = -constantes.velocidad_asustados if fantasma.dy > 0 else constantes.velocidad_asustados
-                    # memoria de dirección del cerebro
-                    if fantasma.controlador.dx != 0: fantasma.controlador.dx = -constantes.velocidad_asustados if fantasma.controlador.dx > 0 else constantes.velocidad_asustados
-                    if fantasma.controlador.dy != 0: fantasma.controlador.dy = -constantes.velocidad_asustados if fantasma.controlador.dy > 0 else constantes.velocidad_asustados
 
-        # controlador del tiempo asustados de los fantasmas 
+            for fantasma in self.fantasmas:
+                if fantasma.controlador.estado in ["perseguir", "dispersion"]:
+                    fantasma.controlador.estado = "asustado" # Tienen que dar la vuelta 180º y reducir su velocidad
+                    self.forzar_giro_180(fantasma, constantes.velocidad_asustados)
+                    
+        # Controlador del tiempo en el que están asustados los fantasmas 
         tiempo_actual = pygame.time.get_ticks()
         if self.tiempo_asustado > 0:
             tiempo_transcurrido = (tiempo_actual - self.tiempo_asustado) // 1000
-            if tiempo_transcurrido >= 8: # Duración del susto: 8 segundos
+            if tiempo_transcurrido >= 8: # Si ya han transcurrido los 8 segundos del susto
                 self.tiempo_asustado = 0
                 for fantasma in self.fantasmas:
                     if fantasma.controlador.estado == "asustado":
                         # Volvemos al estado normal
                         fantasma.controlador.estado = "perseguir"
-                        # les devolvemos la velocidad normal
+                        # Les devolvemos la velocidad normal y giran 180º
+                        # En caso de que por reducir la velocidad se quedasen en un pixel impar les obligamos a moverse a uno par
                         vel = constantes.velocidad
-                        if fantasma.dx != 0: fantasma.dx = vel if fantasma.dx > 0 else -vel
-                        if fantasma.dy != 0: fantasma.dy = vel if fantasma.dy > 0 else -vel
-                        if fantasma.controlador.dx != 0: fantasma.controlador.dx = vel if fantasma.controlador.dx > 0 else -vel
-                        if fantasma.controlador.dy != 0: fantasma.controlador.dy = vel if fantasma.controlador.dy > 0 else -vel
-
-                        # sincronizamos la cuadricula impar
-                        # Si se han quedado en un píxel impar, los empujamos 1 píxel hacia adelante para que no se salten la baldosa
-                        if fantasma.forma.x % 2 != 0: 
-                            fantasma.forma.x += 1 if fantasma.dx > 0 else -1
-                        if fantasma.forma.y % 2 != 0:
-                            fantasma.forma.y += 1 if fantasma.dy > 0 else -1
-
-        for fantasma in self.fantasmas: #actualizamos en fisica
+                        self.forzar_giro_180(fantasma, constantes.velocidad, invertir=False)
+                        self.sincronizar_cuadricula(fantasma)
+    
+        # Actualizamos los fantasmas --------------------------
+        for fantasma in self.fantasmas: 
             fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador, lista_fantasmas=self.fantasmas)
         
         for fantasma in self.fantasmas:
-            # Comprobamos si sus rectángulos se superponen
-            if self.jugador.forma.colliderect(fantasma.forma): #nos hemos comido al fantasma o nos ha comido a nosotros
+            # Encogemos las 'hitbox' temporalmente 10 píxeles por cada lado para mejorar el game feel
+            hitbox_pacman = self.jugador.forma.inflate(-10, -10)
+            hitbox_fantasma = fantasma.forma.inflate(-10, -10)
+            # Comprobamos si la hitbox encogida del fantasma choca con la de Pacman. En caso de que sí, distinguimos casos.
+            if hitbox_pacman.colliderect(hitbox_fantasma): 
                 if fantasma.controlador.estado == "asustado":
                     fantasma.controlador.estado = "ojos"
                     self.puntuacion += 200
-                    pygame.time.delay(500)
-                    #volvemos a sincronizarlo a la cuadricula (par)
-                    if fantasma.forma.x % 2 != 0: 
-                        fantasma.forma.x += 1 if fantasma.dx > 0 else -1
-                    if fantasma.forma.y % 2 != 0:
-                        fantasma.forma.y += 1 if fantasma.dy > 0 else -1
-                
+                    pygame.time.delay(500) # Pausa al comerse un fantasma (habrá que añadir efectos visuales)
+                    #volvemos a sincronizarlo a pixel par
+                    self.sincronizar_cuadricula(fantasma)
                 elif fantasma.controlador.estado in ["perseguir", "dispersion"]:
-                    self.morir() #perdemos una vida y reiniciamos posiciones
+                    self.morir() # Perdemos una vida y reiniciamos posiciones
                     break # Salimos del bucle para evitar múltiples colisiones en el mismo frame
         
-        # control del cronometro de oleadas (persecución/dispersión)
+        # Control del cronómetro de oleadas (persecución/dispersión)
         tiempo_actual = pygame.time.get_ticks()
         
         # Si no estamos en modo asustado (el susto pausa el cronómetro de oleadas)
@@ -168,49 +163,75 @@ class Game:
             duracion_actual = self.duraciones_oleada[0] if self.modo_global == "dispersion" else self.duraciones_oleada[1]
 
             if tiempo_transcurrido_oleada >= duracion_actual:
-                # reseteamos el reloj
+                # Reseteamos el reloj
                 self.tiempo_cambio_modo = tiempo_actual     
-                # alternamos el modo
+                # Alternamos de modo
                 self.modo_global = "perseguir" if self.modo_global == "dispersion" else "dispersion"
-                # aplicamos el cambio a los fantasmas y forzamos el giro de 180º
+                # Aplicamos el cambio a los fantasmas vivos y forzamos el giro de 180º
                 for fantasma in self.fantasmas:
-                    # Solo aplicamos esto a fantasmas vivos (los ojos y los asustados van a lo suyo)
                     if fantasma.controlador.estado in ["perseguir", "dispersion"]:
                         fantasma.controlador.estado = self.modo_global
-                        # al igual que cunado comemos la super-bolita, se hace un giro de 180º
-                        fantasma.dx *= -1
-                        fantasma.dy *= -1
-                        fantasma.controlador.dx *= -1
-                        fantasma.controlador.dy *= -1
+                        self.forzar_giro_180(fantasma)
 
     def dibujar(self):
-        self.pantalla.fill(constantes.color_fondo) #pintar el fondo de la pantalla
-        self.mapa.dibujar(self.pantalla) #dibujar el mapa
+        '''
+        Se encarga del renderizado de los gráficos por pantalla
+        '''
+        self.pantalla.fill((0, 0, 0))
 
-        #dibujamos el jugador y los fantasmas
+        # Dibujamos el mapa
+        self.mapa.dibujar(self.pantalla) 
+
+        # Dibujamos a Pacman
         self.jugador.dibujar(self.pantalla, self.modo_debug) 
         
+        # Dibujamos a los fantasmas
         for fantasma in self.fantasmas:
             fantasma.dibujar(self.pantalla, self.modo_debug)
         
-        #dibujar el marcador (en la esquina superior izquierda)
+        # Dibujamos el HUD (Heads-Up Display)
         texto_puntos = self.fuente_marcador.render(f"SCORE: {self.puntuacion}", True, (255, 255, 255))
         self.pantalla.blit(texto_puntos, (10, 5))
 
-        vidas = self.fuente_marcador.render(f"VIDAS: {6-self.vidas}", True, (255, 255, 255))
+        vidas = self.fuente_marcador.render(f"VIDAS: {6-self.vidas}", True, (255, 255, 255)) # Puesto por ahora para mostrar cuantas vidas usa
         self.pantalla.blit(vidas, (430, 5))
 
+        pygame.display.update() # Actualizamos la pantalla para mostrar los cambios
 
-        pygame.display.update() #actualizar la pantalla para mostrar los cambios
+    def forzar_giro_180(self, fantasma, nueva_velocidad=None, invertir=True):
+        '''
+        Invierte la dirección del fantasma y ajusta la velocidad.
+        '''
+        # Si no se pasa una velocidad nueva, mantenemos la magnitud actual
+        vel = nueva_velocidad if nueva_velocidad is not None else abs(fantasma.dx) or abs(fantasma.dy)
+        multiplicador = -1 if invertir else 1
+
+        if fantasma.dx != 0: 
+            fantasma.dx = (vel * multiplicador) if fantasma.dx > 0 else (-vel * multiplicador)
+            fantasma.controlador.dx = fantasma.dx
+        if fantasma.dy != 0: 
+            fantasma.dy = (vel * multiplicador) if fantasma.dy > 0 else (-vel * multiplicador)
+            fantasma.controlador.dy = fantasma.dy
+
+    def sincronizar_cuadricula(self, fantasma):
+        '''
+        Evita desalineamientos forzando pixeles pares.
+        '''
+        if fantasma.forma.x % 2 != 0: 
+            fantasma.forma.x += 1 if fantasma.dx > 0 else -1
+        if fantasma.forma.y % 2 != 0:
+            fantasma.forma.y += 1 if fantasma.dy > 0 else -1
 
     def reiniciar_posiciones(self):
-        """Devuelve a Pac-Man y a los fantasmas a sus posiciones de inicio"""
-        # reseteamos el pacman
+        '''
+        Devuelve a Pac-Man y a los fantasmas a sus posiciones de inicio tras perder una vida
+        '''
+        # 'Reset' de Pacman
         self.jugador.forma.x, self.jugador.forma.y = self.spawn_pacman
         self.jugador.dx, self.jugador.dy = 0, 0
         self.jugador.controlador.dx, self.jugador.controlador.dy = 0, 0
 
-        # reseteamos fantasmas
+        # 'Reset' de los fantasmas
         centro_x = 13 * constantes.tamano_celda
         posiciones_fantasmas = [
             (centro_x, 14 * constantes.tamano_celda),      # Blinky
@@ -225,29 +246,38 @@ class Game:
             fantasma.controlador.dy = 0
             fantasma.dx = constantes.velocidad # Reset velocidad física
             fantasma.dy = 0
+
         # reseteamos el sistema de oleadas (dispersión/persecución) 
         self.modo_global = "dispersion"
         self.tiempo_cambio_modo = pygame.time.get_ticks()
+        self.tiempo_asustado = 0
 
     def morir(self):
+        '''
+        Gestiona las muertes de Pacman
+        '''
         self.vidas -= 1
-        #indicar en pantalla que hemos muerto con algun texto??        
+
+        # Tenemos que añadir aún las animaciones de muerte   
         if self.vidas <= 0:
             self.game_over = True
-            #acabar el juego de alguna forma???
         else:
             # Pausa de 1.5 segundos antes de reaparecer
             pygame.time.delay(1500)
             self.reiniciar_posiciones()
 
     def run_game(self):
+        '''
+        Bucle principal del juego
+        '''
         while self.run:
-            #para controlar el FRAME RATE
-            self.reloj.tick(constantes.FPS) #limitar a 60 fps
+            
+            self.reloj.tick(constantes.FPS) # Limitamos a 60 fps
             self.eventos()
             self.update()
             self.dibujar()
-        pygame.quit() #cerrar pygame al salir del bucle
+
+        pygame.quit()
 
 if __name__ == "__main__":
     Game().run_game()
