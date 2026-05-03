@@ -1,6 +1,16 @@
 import pygame
 from src import constantes
 
+def escalar_imagen(imagen, escala):
+    '''
+    Función auxiliar para escalar el sprite.
+    Precalcularemos la imagen escalada para que no se realice en el bucle del juego.
+    Será utilizada por las clases hijas (Pacman y Fantasma)
+    '''
+    ancho = int(imagen.get_width() * escala)
+    alto = int(imagen.get_height() * escala)
+    return pygame.transform.scale(imagen, (ancho, alto))
+
 def camino_esta_libre(rect_actual, dx, dy, muros):
     '''
     Se encarga de detectar colisiones simulando un paso en la dirección actual
@@ -28,6 +38,9 @@ class EnteFisico:
         self.controlador = controlador
         self.dx = 0
         self.dy = 0
+
+        # Para dibujar los valores de la heurística en el modo Debug
+        self.fuente_debug = pygame.font.SysFont("Arial", 18, bold=True) 
 
     def actualizar(self, dimensiones, muros, objetivo=None, lista_fantasmas=None,**kwargs):
         '''

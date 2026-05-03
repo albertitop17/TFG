@@ -8,6 +8,7 @@ class Humano:
         #empieza quieto
         self.dx = 0
         self.dy = 0
+        self.estado = "dispersion"
 
     def obtener_movimiento(self, **kwargs):
         

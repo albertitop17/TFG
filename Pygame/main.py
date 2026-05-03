@@ -63,6 +63,8 @@ class Game:
                 if evento.key == pygame.K_SPACE:
                     self.jugador.controlador = controladores.IA()
                     print("IA")
+                if evento.key == pygame.K_0:
+                    self.fantasmas[0].controlador = controladores.Humano()
                 if evento.key == pygame.K_d:
                     # Alternar entre 0, 1 y 2
                     self.modo_debug = (self.modo_debug + 1) % 3

@@ -53,6 +53,16 @@ DEBUG = False
 
 color_fondo = (0, 0, 0)
 
+colores_debug = {
+        'rojo': (255, 0, 0),
+        'rosa': (255, 184, 255),
+        'azul': (0, 255, 255),
+        'naranja': (255, 184, 82)
+    }
+
+# Cooldown de las animaciones (en ms)
+cooldown_animaciones = 120
+
 # Formato: 'clave': [(x, y, ancho, alto),...] del Sprite Sheet
 PACMAN_COORDENADAS = {
     'quieto': [(0, 0, 16, 16)], 
