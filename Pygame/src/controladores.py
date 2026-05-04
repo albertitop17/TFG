@@ -52,7 +52,8 @@ class IA:
         self.meta_bolita_debug = None
         self.camino_debug = []
     
-    def obtener_movimiento(self, rect_actual = None, muros = None, objetivo=None, lista_fantasmas=None, mapa_logico=None, bolitas=None, **kwargs):
+    def obtener_movimiento(self, rect_actual = None, muros = None, objetivo=None, lista_fantasmas=None, 
+                           mapa_logico=None, bolitas=None, super_bolitas=None, **kwargs):
         
         # Tendremos q poner que cuando acabe las bolitas acabe el nivel (por ahora se queda quieto)
         if not bolitas or not mapa_logico:
@@ -63,97 +64,25 @@ class IA:
             return self.dx, self.dy
 
         # Discretizamos las coordenadas de Pacman. Pasamos de un esoacion continuo (píxeles) al grafo (matriz)
-        x_discretizada = rect_actual.centerx // constantes.tamano_celda
-        y_discretizada = (rect_actual.centery - constantes.offset_y_mapa) // constantes.tamano_celda
-        nodo_origen = (x_discretizada, y_discretizada)
+        nodo_origen = (rect_actual.centerx // constantes.tamano_celda,  (rect_actual.centery - constantes.offset_y_mapa) // constantes.tamano_celda)
 
         # Generamos un 'aura' de peligro alrededor de cada fantasma (primera versión, por ahora atraviesan las paredes)
-        mapa_peligro = {}
+        mapa_peligro = self.calculamos_aura_peligro(lista_fantasmas, mapa_logico)
         self.mapa_peligro_debug = mapa_peligro
-        if lista_fantasmas:
-            for f in lista_fantasmas:
+        
+        # Calculamos cuál es la meta
+        meta_bolita = self.calulamos_meta_bolita(rect_actual, bolitas, super_bolitas, lista_fantasmas, mapa_peligro)
+        if meta_bolita:
+            self.meta_bolita_debug = meta_bolita
+            # Hacemos la división entera de 'meta_bolita' para obtener la coordenada de la cuadrícula
+            bolita_dis = ( meta_bolita.x // constantes.tamano_celda, (meta_bolita.y - constantes.offset_y_mapa) // constantes.tamano_celda)
 
-                es_peligroso = f.controlador.estado not in ["ojos", "asustado"]
-                se_acaba_susto = f.controlador.estado == "asustado" and f.aviso_fin_asustado == True
+            # Aplicamos el Algoritmo A* weighted (con peso de los fantasmas)
+            camino = self.a_star_search(nodo_origen, bolita_dis, mapa_logico, mapa_peligro)
+            self.camino_debug = camino
 
-                if es_peligroso or se_acaba_susto: 
-                    
-                    # Discretizamos las posiciones de los fantasmas que puedan atacar a Pacman
-                    nodo_fantasma = (f.forma.centerx // constantes.tamano_celda, (f.forma.centery - constantes.offset_y_mapa) // constantes.tamano_celda)
-
-                    # Penalizaciones en función de la distancia [0,1,2,3]
-                    penalizaciones = [5000, 2000, 1000, 500]
-                    direcciones = [(0, -1), (0, 1), (-1, 0), (1, 0)]
-
-                    # Usamos una cola para generar el aura de peligro
-                    cola_aura_peligro = deque([(nodo_fantasma, 0)]) 
-                    visitados_aura_peligro = {nodo_fantasma}
-
-                    while cola_aura_peligro:
-
-                        (cx,cy), distancia = cola_aura_peligro.popleft() 
-                        
-                        # Asignación directa desde la lista (acceso instantáneo)
-                        penalizacion = penalizaciones[distancia]
-                                
-                        # Si se solapan auras de varios fantasmas, nos quedamos con el peligro más alto
-                        mapa_peligro[(cx, cy)] = max(mapa_peligro.get((cx, cy), 0), penalizacion)
-
-                        # Solo hacemos que 'fluya' el aura de peligro 3 casillas
-                        if distancia < 3:
-                            for dx, dy in direcciones:
-                                nx, ny = cx + dx, cy + dy
-                                
-                                # Comprobamos límites de mapa y que no sea un muro 
-                                if 0 <= ny < constantes.filas_mapa and 0 <= nx < constantes.columnas_mapa:
-                                    if mapa_logico[ny][nx] != "1" and (nx, ny) not in visitados_aura_peligro:
-                                        visitados_aura_peligro.add((nx, ny))
-                                        cola_aura_peligro.append(((nx, ny), distancia + 1))
-        # Seleccionamos la meta
-        def coste_utilidad_bolita(bolita):
-            dist_pacman = self.distancia_con_portales(rect_actual.centerx, rect_actual.centery, 
-                bolita.centerx, bolita.centery, constantes.ancho_px, constantes.y_tunel_px)
-            
-            # Consultamos el peligro de la casilla donde está la bolita
-            bx = bolita.x // constantes.tamano_celda
-            by = (bolita.y - constantes.offset_y_mapa) // constantes.tamano_celda
-            
-            peligro_casilla = mapa_peligro.get((bx, by), 0)
-
-            return dist_pacman + peligro_casilla
-
-        meta_bolita = min(bolitas, key=coste_utilidad_bolita)
-        self.meta_bolita_debug = meta_bolita
-        # Hacemos la división entera de 'meta_bolita' para obtener la coordenada de la cuadrícula
-        bolita_dis = ( meta_bolita.x // constantes.tamano_celda, (meta_bolita.y - constantes.offset_y_mapa) // constantes.tamano_celda)
-
-        # Aplicamos el Algoritmo A* weighted (con peso de los fantasmas)
-        camino = self.a_star_search(nodo_origen, bolita_dis, mapa_logico, mapa_peligro)
-        self.camino_debug = camino
-
-        # Traducimos en cinemática (vector de movimiento) el camino calculado
-        if camino and len(camino) > 1:
-            next_node = camino[1] # El índice 0 es el nodo actual, el 1 es el siguiente nodo 
-            # Calculamos la diferencia entre la casilla a la que vamos y en la que estamos
-            dx_grid = next_node[0] - x_discretizada
-            dy_grid = next_node[1] - y_discretizada
-            
-            # Añadimos la mecánica del portal 
-            # Si el salto es 1 a la derecha (ej: de x=14 a x=15 -> 15-14 = 1)
-            # Si cruzamos el portal hacia la derecha (ej: de x=27 a x=0 -> 0-27 = -27)
-            if dx_grid == 1 or dx_grid < -1:
-                self.dx, self.dy = constantes.velocidad, 0
-            # Si el salto es 1 a la izquierda (ej: de x=15 a x=14 -> 14-15 = -1)
-            # Si cruzamos el portal hacia la izquierda (ej: de x=0 a x=27 -> 27-0 = 27)
-            elif dx_grid == -1 or dx_grid > 1:
-                self.dx, self.dy = -constantes.velocidad, 0
-            # En el eje Y no hay portal
-            elif dy_grid == 1:
-                self.dx, self.dy = 0, constantes.velocidad
-            elif dy_grid == -1:
-                self.dx, self.dy = 0, -constantes.velocidad
-        else:
-            self.dx, self.dy = 0, 0 # hemos llegado o no hay camino
+            # Traducimos en cinemática (vector de movimiento) el camino calculado
+            self.transformar_en_movimiento(nodo_origen, camino)
         return self.dx, self.dy
 
     def a_star_search(self, nodo_origen, meta, mapa_logico, mapa_peligro):
@@ -236,7 +165,8 @@ class IA:
 
     def distancia_con_portales(self, px1, py1, px2, py2, ancho_px, y_tunel_px):
         '''
-        Calcula la distancia usando la distancia Manhattan y contemplando que podemos teletrasportarnos por los portales
+        Función auxiliar.
+        Calcula la distancia usando la distancia Manhattan y contemplando que podemos teletrasportarnos por los portales.
         '''
         # Distancia Manhattan normal
         dist_directa = abs(px1 - px2) + abs(py1 - py2)
@@ -247,6 +177,97 @@ class IA:
 
         return min(dist_directa, dist_izq, dist_der)
 
+    def calculamos_aura_peligro(self, lista_fantasmas, mapa_logico):
+        '''
+        Función auxiliar.
+        Aplica el algoritmo BFS para expandir el aura de los fantasmas amenazantes.
+        '''
+        mapa_peligro = {}
+        if lista_fantasmas:
+            for f in lista_fantasmas:
+
+                es_peligroso = f.controlador.estado not in ["ojos", "asustado"]
+                se_acaba_susto = f.controlador.estado == "asustado" and f.aviso_fin_asustado == True
+
+                if es_peligroso or se_acaba_susto: 
+                    
+                    # Discretizamos las posiciones de los fantasmas que puedan atacar a Pacman
+                    nodo_fantasma = (f.forma.centerx // constantes.tamano_celda, (f.forma.centery - constantes.offset_y_mapa) // constantes.tamano_celda)
+
+                    # Penalizaciones en función de la distancia [0,1,2,3]
+                    penalizaciones = [5000, 2000, 1000, 500]
+                    direcciones = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+
+                    # Usamos una cola para generar el aura de peligro
+                    cola_aura_peligro = deque([(nodo_fantasma, 0)]) 
+                    visitados_aura_peligro = {nodo_fantasma}
+
+                    while cola_aura_peligro:
+
+                        (cx,cy), distancia = cola_aura_peligro.popleft() 
+                        
+                        # Asignación directa desde la lista (acceso instantáneo)
+                        penalizacion = penalizaciones[distancia]
+                                
+                        # Si se solapan auras de varios fantasmas, nos quedamos con el peligro más alto
+                        mapa_peligro[(cx, cy)] = max(mapa_peligro.get((cx, cy), 0), penalizacion)
+
+                        # Solo hacemos que 'fluya' el aura de peligro 3 casillas
+                        if distancia < 3:
+                            for dx, dy in direcciones:
+                                nx, ny = cx + dx, cy + dy
+                                
+                                # Comprobamos límites de mapa y que no sea un muro 
+                                if 0 <= ny < constantes.filas_mapa and 0 <= nx < constantes.columnas_mapa:
+                                    if mapa_logico[ny][nx] != "1" and (nx, ny) not in visitados_aura_peligro:
+                                        visitados_aura_peligro.add((nx, ny))
+                                        cola_aura_peligro.append(((nx, ny), distancia + 1))
+        return mapa_peligro
+    
+    def calulamos_meta_bolita(self, rect_actual, bolitas, super_bolitas, lista_fantasmas, mapa_peligro):
+        # Seleccionamos la meta
+        def coste_utilidad_bolita(bolita):
+            dist_pacman = self.distancia_con_portales(rect_actual.centerx, rect_actual.centery, 
+                bolita.centerx, bolita.centery, constantes.ancho_px, constantes.y_tunel_px)
+            
+            # Consultamos el peligro de la casilla donde está la bolita
+            bx = bolita.x // constantes.tamano_celda
+            by = (bolita.y - constantes.offset_y_mapa) // constantes.tamano_celda
+            
+            peligro_casilla = mapa_peligro.get((bx, by), 0)
+
+            return dist_pacman + peligro_casilla
+
+        meta_bolita = min(bolitas, key=coste_utilidad_bolita)
+        return meta_bolita
+    
+    def transformar_en_movimiento(self, nodo_origen, camino):
+        '''
+        Función auxiliar.
+        Traduce el camino (el siguiente paso), en vectores de velocidad (dx, dy) de Pygame.
+        '''
+        if camino and len(camino) > 1:
+            next_node = camino[1] # El índice 0 es el nodo actual, el 1 es el siguiente nodo 
+            # Calculamos la diferencia entre la casilla a la que vamos y en la que estamos
+            dx_grid = next_node[0] - nodo_origen[0]
+            dy_grid = next_node[1] - nodo_origen[1]
+            
+            # Añadimos la mecánica del portal 
+            # Si el salto es 1 a la derecha (ej: de x=14 a x=15 -> 15-14 = 1)
+            # Si cruzamos el portal hacia la derecha (ej: de x=27 a x=0 -> 0-27 = -27)
+            if dx_grid == 1 or dx_grid < -1:
+                self.dx, self.dy = constantes.velocidad, 0
+            # Si el salto es 1 a la izquierda (ej: de x=15 a x=14 -> 14-15 = -1)
+            # Si cruzamos el portal hacia la izquierda (ej: de x=0 a x=27 -> 27-0 = 27)
+            elif dx_grid == -1 or dx_grid > 1:
+                self.dx, self.dy = -constantes.velocidad, 0
+            # En el eje Y no hay portal
+            elif dy_grid == 1:
+                self.dx, self.dy = 0, constantes.velocidad
+            elif dy_grid == -1:
+                self.dx, self.dy = 0, -constantes.velocidad
+        else:
+            self.dx, self.dy = 0, 0 # hemos llegado o no hay camino
 class ControladorFantasmaPadre:
     '''
     Clase padre de todos los fantasmas.

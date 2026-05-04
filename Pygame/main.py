@@ -31,12 +31,13 @@ class Game:
         self.jugador = Pacman(x = self.spawn_pacman[0], y = self.spawn_pacman[1], imagen_entera = sprite, controlador = controladores.Humano()) 
 
         # Fantasmas: Lista de fantasmas: (x, y, color, cerebro)
-        centro_x = 13 * constantes.tamano_celda
+        tam_celda = constantes.tamano_celda
+        centro_x = 13 * tam_celda
         self.fantasmas = [
-            Fantasma(x=centro_x     , y=13 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroBlinky(), color='rojo'),
-            Fantasma(x=centro_x - 40, y=17 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroPinky(), color='rosa'),
-            Fantasma(x=centro_x     , y=17 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroInky(), color='azul'),
-            Fantasma(x=centro_x + 40, y=17 * constantes.tamano_celda, imagen_entera=sprite, controlador=controladores.CerebroClyde(), color='naranja'),
+            Fantasma(x=centro_x              , y=13 * tam_celda, imagen_entera=sprite, controlador=controladores.CerebroBlinky(), color='rojo'),
+            Fantasma(x=centro_x              , y=15 * tam_celda, imagen_entera=sprite, controlador=controladores.CerebroPinky(),  color='rosa'),
+            Fantasma(x=centro_x + tam_celda  , y=16 * tam_celda, imagen_entera=sprite, controlador=controladores.CerebroInky(),   color='azul'),
+            Fantasma(x=centro_x + 2*tam_celda  , y=17 * tam_celda, imagen_entera=sprite, controlador=controladores.CerebroClyde(),  color='naranja'),
         ]
         
         # Variables de Estado Lógico
@@ -95,7 +96,8 @@ class Game:
         dimensiones = (constantes.ancho_ventana , constantes.alto_ventana)
 
         # Actualizamos a Pacman ------------------------
-        self.jugador.actualizar(dimensiones=dimensiones, muros=self.mapa.muros, lista_fantasmas=self.fantasmas, mapa_logico=self.mapa.matriz, bolitas=self.mapa.bolitas)
+        self.jugador.actualizar(dimensiones=dimensiones, muros=self.mapa.muros, lista_fantasmas=self.fantasmas, 
+                                mapa_logico=self.mapa.matriz, bolitas=self.mapa.bolitas,super_bolitas=self.mapa.super_bolitas)
 
         # Mecánica de comer bolitas: comprobamos si el rectángulo del jugador colisiona con alguna bolita
         indice_bolita = self.jugador.forma.collidelist(self.mapa.bolitas)
@@ -248,12 +250,13 @@ class Game:
         self.jugador.controlador.dx, self.jugador.controlador.dy = 0, 0
 
         # 'Reset' de los fantasmas
-        centro_x = 13 * constantes.tamano_celda
+        tam_celda = constantes.tamano_celda
+        centro_x = 13 * tam_celda
         posiciones_fantasmas = [
-            (centro_x, 14 * constantes.tamano_celda),      # Blinky
-            (centro_x - 40, 17 * constantes.tamano_celda), # Pinky
-            (centro_x, 17 * constantes.tamano_celda),      # Inky
-            (centro_x + 40, 17 * constantes.tamano_celda)  # Clyde
+            (centro_x, 14 * tam_celda),      # Blinky
+            (centro_x, 17 * tam_celda), # Pinky
+            (centro_x + tam_celda, 17 * tam_celda),      # Inky
+            (centro_x + 2*tam_celda, 17 * tam_celda)  # Clyde
         ]
         for i, fantasma in enumerate(self.fantasmas):
             fantasma.forma.x, fantasma.forma.y = posiciones_fantasmas[i]

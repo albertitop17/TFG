@@ -40,14 +40,14 @@ class EnteFisico:
         # Para dibujar los valores de la heurística en el modo Debug
         self.fuente_debug = pygame.font.SysFont("Arial", 18, bold=True) 
 
-    def actualizar(self, dimensiones, muros, objetivo=None, lista_fantasmas=None,**kwargs):
+    def actualizar(self, dimensiones, muros, objetivo=None, lista_fantasmas=None, super_bolitas=None, **kwargs):
         '''
         Pipeline principal de actualización ejecutado en cada fotograma.
         Sigue un orden de ejecución determinado
         '''
         # 1º. El cerebro (Controlador) obtiene una petición de movimiento
         dx_deseada, dy_deseada = self.controlador.obtener_movimiento(rect_actual = self.forma, muros = muros, objetivo = objetivo, 
-                                                                     lista_fantasmas = lista_fantasmas, **kwargs)
+                                                                     lista_fantasmas = lista_fantasmas, super_bolitas = super_bolitas, **kwargs)
         # 2º. Comprobamos si el movimiento deseado es posible 
         self.gestionar_movimiento(dx_deseada, dy_deseada, muros)
         # 3º. Movemos al personaje según el movimiento permitido (gestionando la dinámica de túneles)
