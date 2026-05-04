@@ -1,6 +1,7 @@
 import pygame
 import random
 import heapq
+from collections import deque
 from src import constantes
 from src.fisica import camino_esta_libre
 class Humano:
@@ -13,6 +14,7 @@ class Humano:
         self.dx = 0
         self.dy = 0
         self.estado = "dispersion" # No hace nada, solamente está por compatibilidad 
+        self.liberado = True
 
     def obtener_movimiento(self, **kwargs):
         '''
@@ -66,23 +68,36 @@ class IA:
             for f in lista_fantasmas:
                 if f.controlador.estado not in ["ojos", "asustado"]: 
                     # Discretizamos las posiciones de los fantasmas que puedan atacar a Pacman
-                    fantasma_dis_x = f.forma.centerx // constantes.tamano_celda
-                    fantasma_dis_y = (f.forma.centery - constantes.offset_y_mapa) // constantes.tamano_celda
-                    
-                    # Generamos el rombo de peligro 
-                    for dx in range(-3, 4):
-                        for dy in range(-3, 4):
-                            distancia = abs(dx) + abs(dy) # Distancia Manhattan
-                            if distancia <= 3: # Si está dentro del radio de peligro
-                                nx, ny = fantasma_dis_x + dx, fantasma_dis_y + dy
-                                if distancia == 0: penalizacion = 5000
-                                elif distancia == 1: penalizacion = 2000
-                                elif distancia == 2: penalizacion = 1000
-                                elif distancia == 3: penalizacion = 500
-                                
-                                # Si se solapan auras de varios fantasmas, nos quedamos con el peligro más alto
-                                mapa_peligro[(nx, ny)] = max(mapa_peligro.get((nx, ny), 0), penalizacion)
+                    nodo_fantasma = (f.forma.centerx // constantes.tamano_celda, (f.forma.centery - constantes.offset_y_mapa) // constantes.tamano_celda)
 
+                    # Penalizaciones en función de la distancia [0,1,2,3]
+                    penalizaciones = [5000, 2000, 1000, 500]
+                    direcciones = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+
+                    # Usamos una cola para generar el aura de peligro
+                    cola_aura_peligro = deque([(nodo_fantasma, 0)]) 
+                    visitados_aura_peligro = {nodo_fantasma}
+
+                    while cola_aura_peligro:
+
+                        (cx,cy), distancia = cola_aura_peligro.popleft() 
+                        
+                        # Asignación directa desde la lista (acceso instantáneo)
+                        penalizacion = penalizaciones[distancia]
+                                
+                        # Si se solapan auras de varios fantasmas, nos quedamos con el peligro más alto
+                        mapa_peligro[(cx, cy)] = max(mapa_peligro.get((cx, cy), 0), penalizacion)
+
+                        # Solo hacemos que 'fluya' el aura de peligro 3 casillas
+                        if distancia < 3:
+                            for dx, dy in direcciones:
+                                nx, ny = cx + dx, cy + dy
+                                
+                                # Comprobamos límites de mapa y que no sea un muro 
+                                if 0 <= ny < constantes.filas_mapa and 0 <= nx < constantes.columnas_mapa:
+                                    if mapa_logico[ny][nx] != "1" and (nx, ny) not in visitados_aura_peligro:
+                                        visitados_aura_peligro.add((nx, ny))
+                                        cola_aura_peligro.append(((nx, ny), distancia + 1))
         # Seleccionamos la meta
         def coste_utilidad_bolita(bolita):
             dist_pacman = self.distancia_con_portales(rect_actual.centerx, rect_actual.centery, 
@@ -136,27 +151,37 @@ class IA:
         para asegurarnos de que 'veamos' correctamente a los fantasmas al calcular el camino.
         '''
         frontera = []
-        # La cola de prioridad guarda tuplas de: (f(n), g(n), nodo_actual, camino_acumulado)
-        heapq.heappush(frontera, (0, 0, nodo_origen, [nodo_origen]))
+        # La cola de prioridad guarda tuplas de: (f(n), g(n), nodo_actual)
+        heapq.heappush(frontera, (0, 0, nodo_origen))
         # Usaremos 'visitados' para mapea el nodo con el coste f(n) más bajo encontrado 
         visitados = {nodo_origen: 0}
+        # Diccionario para rastrear el camino de forma súper eficiente
+        padres = {nodo_origen: None}
         # Direcciones posibles: (dx, dy) en la cuadrícula (discretizada)
         direcciones = [(0, -1), (0, 1), (-1, 0), (1, 0)]
 
+        y_tunel = constantes.tunel # fila del túnel 
         
         while frontera: # Hasta que no tengamos nodos para explorar
             # Tomamos el nodo con menor f(n) de la frontera
-            _, g_n, actual, camino = heapq.heappop(frontera)
+            _, g_n, actual = heapq.heappop(frontera)
 
-            # Miramos is hemos alcanzado el objetivo
+            # Miramos is hemos alcanzado el objetivo. En caso afirmativo, reconstruimos la meta
             if actual == meta:
-                return camino
+                camino_reconstruido = []
+                nodo_actual = actual
+                while nodo_actual is not None:
+                    camino_reconstruido.append(nodo_actual)
+                    nodo_actual = padres[nodo_actual] 
+                # Invertimos la lista porque la hemos construido desde la meta hasta el origen
+                return camino_reconstruido[::-1]
             
             # Añadimos los nodos vecinos al actual
             for dx, dy in direcciones:
                 # Usamos variables sueltas (para poder modificarlas)
                 next_x = actual[0] + dx
                 next_y = actual[1] + dy
+
                 # hacemos que el portal identifique el otro lado del tunel como vecino 
                 if actual[1] == constantes.tunel: # Si estamos en la fila del túnel, el nodo vecino del otro lado del mapa también es accesible
                     if actual[0] == 0 and dx == -1: # Si la coord x es 0 y estamos mirando a la izq (en el tunel)
@@ -166,7 +191,7 @@ class IA:
                 siguiente = (next_x, next_y)
 
                 # Comprobamos los límites del mapa (por si acaso, aunque no debería de ser necesario) 
-                if 0 <= siguiente[1] < len(mapa_logico) and 0 <= siguiente[0] < len(mapa_logico[0]): #cambiarlo por ctes
+                if 0 <= siguiente[1] < constantes.filas_mapa and 0 <= siguiente[0] < constantes.columnas_mapa: 
                     
                     if mapa_logico[siguiente[1]][siguiente[0]] != "1":  # Seguiremos con el camino si el siguiente nodo no es un muro
 
@@ -177,11 +202,12 @@ class IA:
                         # Comprobamos si el nodo ya se ha visitado y si el nuevo camino es más barato
                         if siguiente not in visitados or nuevo_coste_g < visitados[siguiente]:
                             visitados[siguiente] = nuevo_coste_g
+                            # Guardamos de qué nodo venimos
+                            padres[siguiente] = actual
 
                             # f(n) = g(n) + h(n)
 
                             # h(n): Heurística admisible (El mínimo de las 3 distancias posibles)
-                            y_tunel = constantes.tunel # fila del túnel 
                             # 1. Distancia Manhattan directa
                             h_directo = abs(siguiente[0] - meta[0]) + abs(siguiente[1] - meta[1])
                             # 2. Distancia cruzando por la izquierda (siguiente -> Izq -> Der -> Meta)
@@ -192,7 +218,7 @@ class IA:
                             h_n = min(h_directo, h_izq, h_der)
                             prioridad = nuevo_coste_g + h_n
 
-                            heapq.heappush(frontera, (prioridad, nuevo_coste_g, siguiente, camino + [siguiente]))
+                            heapq.heappush(frontera, (prioridad, nuevo_coste_g, siguiente))
         return [] # Devuelve vacío si no se encuentra solución
 
     def distancia_con_portales(self, px1, py1, px2, py2, ancho_px, y_tunel_px):
@@ -554,7 +580,7 @@ class CerebroInky(ControladorFantasmaPadre):
         y mediante el algoritmo voraz calcula la casilla que se encuentra a menor distancia
         '''
         # Blinky es el indice 0 en la lista de fantasmas
-        blinky_forma = lista_fantasmas[0].forma #va a ser siempre la lista no vacia? if lista_fantasmas and len(lista_fantasmas) > 0 else None
+        blinky_forma = lista_fantasmas[0].forma 
 
         if not blinky_forma: # En caso de que no esté Blinky (ha muerto), actúa como si fuese Blinky (apunta directamente a Pacman)
             meta_x, meta_y = jugador.forma.centerx, jugador.forma.centery
