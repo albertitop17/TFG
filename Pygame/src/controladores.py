@@ -46,6 +46,11 @@ class IA:
     def __init__(self):
         self.dx = 0
         self.dy = 0
+
+        # Variables para el modo Debug
+        self.mapa_peligro_debug = {}
+        self.meta_bolita_debug = None
+        self.camino_debug = []
     
     def obtener_movimiento(self, rect_actual = None, muros = None, objetivo=None, lista_fantasmas=None, mapa_logico=None, bolitas=None, **kwargs):
         
@@ -64,6 +69,7 @@ class IA:
 
         # Generamos un 'aura' de peligro alrededor de cada fantasma (primera versión, por ahora atraviesan las paredes)
         mapa_peligro = {}
+        self.mapa_peligro_debug = mapa_peligro
         if lista_fantasmas:
             for f in lista_fantasmas:
                 if f.controlador.estado not in ["ojos", "asustado"]: 
@@ -112,11 +118,13 @@ class IA:
             return dist_pacman + peligro_casilla
 
         meta_bolita = min(bolitas, key=coste_utilidad_bolita)
+        self.meta_bolita_debug = meta_bolita
         # Hacemos la división entera de 'meta_bolita' para obtener la coordenada de la cuadrícula
         bolita_dis = ( meta_bolita.x // constantes.tamano_celda, (meta_bolita.y - constantes.offset_y_mapa) // constantes.tamano_celda)
 
         # Aplicamos el Algoritmo A* weighted (con peso de los fantasmas)
         camino = self.a_star_search(nodo_origen, bolita_dis, mapa_logico, mapa_peligro)
+        self.camino_debug = camino
 
         # Traducimos en cinemática (vector de movimiento) el camino calculado
         if camino and len(camino) > 1:

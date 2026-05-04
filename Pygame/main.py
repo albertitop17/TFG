@@ -79,7 +79,7 @@ class Game:
                     self.fantasmas[0].controlador = controladores.Humano()
 
                 if evento.key == pygame.K_d: # Puslando la tecla 'd' alternamos entre los 3 estados del debug: 0, 1 y 2
-                    self.modo_debug = (self.modo_debug + 1) % 3
+                    self.modo_debug = (self.modo_debug + 1) % 4
                     for f in self.fantasmas:
                         if hasattr(f.controlador, 'modo_debug'):
                             f.controlador.modo_debug = self.modo_debug
@@ -103,6 +103,9 @@ class Game:
             self.mapa.bolitas.pop(indice_bolita) # La eliminamos también visualmente
             self.puntuacion += 10
             self.bolitas_comidas += 1
+
+            if self.mapa.bolitas == []:
+                self.game_over = True # Por ahora congelamos todo
 
             for i, fantasma in enumerate(self.fantasmas):
                 # Si está bloqueado y ya hemos comido suficientes bolitas, lo liberamos
