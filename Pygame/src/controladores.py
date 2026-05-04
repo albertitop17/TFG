@@ -72,7 +72,12 @@ class IA:
         self.mapa_peligro_debug = mapa_peligro
         if lista_fantasmas:
             for f in lista_fantasmas:
-                if f.controlador.estado not in ["ojos", "asustado"]: 
+
+                es_peligroso = f.controlador.estado not in ["ojos", "asustado"]
+                se_acaba_susto = f.controlador.estado == "asustado" and f.aviso_fin_asustado == True
+
+                if es_peligroso or se_acaba_susto: 
+                    
                     # Discretizamos las posiciones de los fantasmas que puedan atacar a Pacman
                     nodo_fantasma = (f.forma.centerx // constantes.tamano_celda, (f.forma.centery - constantes.offset_y_mapa) // constantes.tamano_celda)
 
@@ -313,8 +318,13 @@ class ControladorFantasmaPadre:
         - Que no intente entrar a la zona de aparición de los fantasmas
         - Que no sea un muro
         '''
-        # Ajustamos la velocidad si están en modo asustados (van más despacio)
-        vel_actual = constantes.velocidad_asustados if self.estado == "asustado" else constantes.velocidad 
+        # Ajustamos la velocidad dependiendo del estado del fantasma
+        if self.estado == "asustado":
+            vel_actual = constantes.velocidad_asustados
+        elif self.estado == "ojos":
+            vel_actual = constantes.velocidad * 2  #Doble de velocidad (20 % 4 == 0)
+        else:
+            vel_actual = constantes.velocidad
 
         # Tenemos 4 direcciones posibles
         direcciones_posibles = [
