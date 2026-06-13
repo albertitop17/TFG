@@ -49,6 +49,18 @@ duraciones_oleada = [7, 20]
 # Bolitas necesarias para liberar a  [Blinky, Pinky, Inky, Clyde] al incio del juego
 bolitas_para_liberarse = [0, 5, 15, 20]
 
+# Penalizaciones del aura de los fantasmas
+penalizaciones = [50000, 20000, 10000, 5000, 2000]
+
+# Direcciones posibles en las que puede ir Pac-Man
+direcciones  = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+# # *******************************
+# SEGUNDOS_PARPADEO = 3          # tiempo restante cuando empieza a parpadear
+# MARGEN_CAZA      = 0.7         # margen de seguridad (el fantasma también se mueve)
+
+radio_caza = 7*tamano_celda
+radio_super = 7*tamano_celda
+radio_bolita_optima = 8*tamano_celda
 # Activador del modo Debug: dibujado de rutas y objetivos 
 DEBUG = False
 
@@ -135,7 +147,7 @@ MAPA = [
     "     1011          1101     ",
     "     1011 111  111 1101     ",
     "111111011 1      1 110111111",
-    " 0    0   1      1   0    0 ",
+    "      0   1      1   0      ",
     "111111011 1      1 110111111",
     "     1011 11111111 1101     ",
     "     1011          1101     ",

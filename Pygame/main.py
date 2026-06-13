@@ -74,7 +74,15 @@ class Game:
                         print("Pac-Man controlado por el Jugador")
                     elif isinstance(self.jugador.controlador, controladores.Humano):
                         self.jugador.controlador = controladores.IA()
-                        print("Pac-Man controlado por la IA (A*)")
+                        print("Pac-Man controlado por la IA (A*) por puntos")
+
+                if evento.key == pygame.K_i: # Añado el cerebro de supervivenciad
+                    if isinstance(self.jugador.controlador, controladores.IAs):
+                        self.jugador.controlador = controladores.Humano()
+                        print("Pac-Man controlado por el Jugador")
+                    elif isinstance(self.jugador.controlador, controladores.Humano):
+                        self.jugador.controlador = controladores.IAs()
+                        print("Pac-Man controlado por la IA (A*) por supervivencia")
 
                 if evento.key == pygame.K_0: # Solo por prueba: Pulsando el 0 podemos controlar a Blinky manualmente (podríamos usar otras teclas)
                     self.fantasmas[0].controlador = controladores.Humano()
@@ -134,8 +142,10 @@ class Game:
             
             # Activamos el parpadeo en los últimos 3 segundos
             parpadeo_activo = (5 <= tiempo_transcurrido < 8)
+            peligro_inminente = (7 <= tiempo_transcurrido < 8) 
             for fantasma in self.fantasmas:
                 fantasma.aviso_fin_asustado = parpadeo_activo
+                fantasma.apuramos_asustado = peligro_inminente
 
             # Si ya han transcurrido los 8 segundos del susto volvemos al estado normal de perseguir
             if tiempo_transcurrido >= 8: 
@@ -144,7 +154,6 @@ class Game:
                     if fantasma.controlador.estado == "asustado":
                         # Volvemos al estado normal
                         fantasma.controlador.estado = "perseguir"
-                        fantasma.aviso_fin_susto = False
                         # Les devolvemos la velocidad normal y giran 180º
                         # En caso de que por reducir la velocidad se quedasen en un pixel impar les obligamos a moverse a uno par
                         self.forzar_giro_180(fantasma, constantes.velocidad, invertir=False)
@@ -162,7 +171,6 @@ class Game:
             if hitbox_pacman.colliderect(hitbox_fantasma): 
                 if fantasma.controlador.estado == "asustado":
                     fantasma.controlador.estado = "ojos"
-                    fantasma.aviso_fin_susto = False
                     self.puntuacion += 200
                     pygame.time.delay(500) # Pausa al comerse un fantasma (habrá que añadir efectos visuales)
                     #volvemos a sincronizarlo a pixel par
@@ -299,6 +307,61 @@ class Game:
             self.dibujar()
 
         pygame.quit()
+    
+
+    def run_simulacion_simple(self, numero_partidas=10):
+        '''
+        Ejecuta partidas con la IA a máxima velocidad sin renderizar.
+        Imprime resultados en formato CSV por stdout.
+        Redirigir con: python main.py > datos.csv
+        '''
+        reloj_original = pygame.time.get_ticks
+        delay_original = pygame.time.delay
+
+        pygame.time.delay = lambda ms: None
+
+        # Lambda tomamos la variable para que devolvuelva el tiempo_simulado actual.
+        tiempo_simulado = 0
+        pygame.time.get_ticks = lambda: tiempo_simulado
+
+        self.jugador.controlador = controladores.IA()
+        print("sim,muertes,puntuacion,nivel_superado,frames,tiempo_sim_s")
+
+        for partida in range(numero_partidas):
+            # Antes de reiniciar_posiciones()
+            # para que tiempo_cambio_modo se inicialice a 0 y las oleadas sean correctas
+            tiempo_simulado = 0
+            vidas_iniciales = 3
+            self.vidas          = vidas_iniciales
+            self.puntuacion     = 0
+            self.bolitas_comidas= 0
+            self.game_over      = False
+            self.reiniciar_posiciones()
+            self.mapa.bolitas.clear()
+            self.mapa.super_bolitas.clear()
+            self.mapa.construir_mapa()
+
+            fotogramas = 0
+            while not self.game_over:
+                tiempo_simulado += 16
+                self.update()
+                fotogramas += 1
+                if not self.mapa.bolitas or fotogramas > 100_000:
+                    break
+
+            muertes = vidas_iniciales - self.vidas
+            nivel_superado= not self.mapa.bolitas
+            print(f"{partida+1},{muertes},{self.puntuacion},"
+                f"{nivel_superado},{fotogramas},{tiempo_simulado/1000:.3f}")
+
+        pygame.time.get_ticks = reloj_original
+        pygame.time.delay     = delay_original
+        pygame.quit()
+
 
 if __name__ == "__main__":
     Game().run_game()
+    # import cProfile
+    # cProfile.run('Game().run_simulacion_simple(10)', sort='cumulative')
+    # # Para simular 50 partidas instantáneas por consola:
+    #Game().run_simulacion_simple(numero_partidas=100)

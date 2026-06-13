@@ -4,6 +4,7 @@ import heapq
 from collections import deque
 from src import constantes
 from src.fisica import camino_esta_libre
+from time import sleep
 class Humano:
     '''
     Controlador de E/S para el jugador. 
@@ -38,7 +39,7 @@ class Humano:
         return self.dx, self.dy
     
 
-class IA:
+class IAs:
     '''
     Agente autónomo que controla a Pacman.
     Utiliza Búsqueda en Grafos (A*) junto con zonas de peligro.
@@ -64,28 +65,565 @@ class IA:
             return self.dx, self.dy
 
         # Discretizamos las coordenadas de Pacman. Pasamos de un esoacion continuo (píxeles) al grafo (matriz)
-        nodo_origen = (rect_actual.centerx // constantes.tamano_celda,  (rect_actual.centery - constantes.offset_y_mapa) // constantes.tamano_celda)
+        tam = constantes.tamano_celda
+        offset = constantes.offset_y_mapa
+        nodo_origen = (rect_actual.centerx // tam,  (rect_actual.centery - offset) // tam)
 
         # Generamos un 'aura' de peligro alrededor de cada fantasma (primera versión, por ahora atraviesan las paredes)
         mapa_peligro = self.calculamos_aura_peligro(lista_fantasmas, mapa_logico)
         self.mapa_peligro_debug = mapa_peligro
-        
-        # Calculamos cuál es la meta
-        meta_bolita = self.calulamos_meta_bolita(rect_actual, bolitas, super_bolitas, lista_fantasmas, mapa_peligro)
-        if meta_bolita:
-            self.meta_bolita_debug = meta_bolita
+
+        # Calculamos cuál es el objetivo (3 modos distintos)
+        # bolita_objetivo = self.seleccionar_objetivo(rect_actual, bolitas, super_bolitas, lista_fantasmas, mapa_peligro)
+
+        bolita_objetivo = self.calulamos_meta_bolita(rect_actual, bolitas, super_bolitas, lista_fantasmas, mapa_peligro)
+
+        if bolita_objetivo:
+            self.meta_bolita_debug = bolita_objetivo
             # Hacemos la división entera de 'meta_bolita' para obtener la coordenada de la cuadrícula
-            bolita_dis = ( meta_bolita.x // constantes.tamano_celda, (meta_bolita.y - constantes.offset_y_mapa) // constantes.tamano_celda)
+            bolita_obj_dis = ( bolita_objetivo.x // tam, (bolita_objetivo.y - offset) // tam)
 
             # Aplicamos el Algoritmo A* weighted (con peso de los fantasmas)
-            camino = self.a_star_search(nodo_origen, bolita_dis, mapa_logico, mapa_peligro)
+            camino = self.a_star_search(nodo_origen, bolita_obj_dis, mapa_logico, mapa_peligro, bolitas, super_bolitas) #bolitas, super_bolitas -> mapa_bolitas
             self.camino_debug = camino
+
+            #sleep(0.5) ejemplo de que funciona aunque no haga los cálculos a tiempo
+
+            # Traducimos en cinemática (vector de movimiento) el camino calculado
+            self.transformar_en_movimiento(nodo_origen, camino)
+
+        return self.dx, self.dy
+
+    def a_star_search(self, nodo_origen, meta, mapa_logico, mapa_peligro, bolitas, super_bolitas):
+        '''
+        Implementación del algoritmo A*.
+        Minimiza una heurística admisible que contempla el teletransporte por el portal.
+        Devuelve una lista de nodos (tuplas) desde el origen hasta la meta (en cada iteración)
+        para asegurarnos de que 'veamos' correctamente a los fantasmas al calcular el camino.
+        '''
+        frontera = []
+        # La cola de prioridad guarda tuplas de: (f(n), g(n), nodo_actual)
+        heapq.heappush(frontera, (0, 0, nodo_origen))
+        # Usaremos 'visitados' para mapea el nodo con el coste f(n) más bajo encontrado #no necesario el coste, no?
+        visitados = {nodo_origen: 0}
+        # Diccionario para rastrear el camino de forma eficiente
+        padres = {nodo_origen: None}
+        # Direcciones posibles: (dx, dy) en la cuadrícula (discretizada)
+        direcciones = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+
+        y_tunel = constantes.tunel # fila del túnel 
+        
+        while frontera: # Hasta que no tengamos nodos para explorar
+            # Tomamos el nodo con menor f(n) de la frontera
+            _, g_n, actual = heapq.heappop(frontera)
+
+            # Miramos is hemos alcanzado el objetivo. En caso afirmativo, reconstruimos la meta
+            if actual == meta:
+                camino_reconstruido = []
+                nodo_actual = actual
+                while nodo_actual is not None:
+                    camino_reconstruido.append(nodo_actual)
+                    nodo_actual = padres[nodo_actual] 
+                # Invertimos la lista porque la hemos construido desde la meta hasta el origen
+                return camino_reconstruido[::-1]
+            
+            # Añadimos los nodos vecinos al actual
+            for dx, dy in direcciones:
+                # Usamos variables sueltas (para poder modificarlas)
+                next_x = actual[0] + dx
+                next_y = actual[1] + dy
+
+                # hacemos que el portal identifique el otro lado del tunel como vecino 
+                if actual[1] == constantes.tunel: # Si estamos en la fila del túnel, el nodo vecino del otro lado del mapa también es accesible
+                    if actual[0] == 0 and dx == -1: # Si la coord x es 0 y estamos mirando a la izq (en el tunel)
+                        next_x = constantes.columnas_mapa - 1 # Salto a la derecha ((actual-(-1,0))%ancho_mapa )
+                    elif actual[0] == constantes.columnas_mapa - 1 and dx == 1: # Análogo por la derecha
+                        next_x = 0 # Salto a la izquierda
+                siguiente = (next_x, next_y)
+
+                # Comprobamos los límites del mapa (por si acaso, aunque no debería de ser necesario) 
+                if 0 <= siguiente[1] < constantes.filas_mapa and 0 <= siguiente[0] < constantes.columnas_mapa: 
+                    
+                    if mapa_logico[siguiente[1]][siguiente[0]] != "1":  # Seguiremos con el camino si el siguiente nodo no es un muro
+                        
+                        # g(n): Coste acumulado  
+                        coste_paso = 1
+
+                        if siguiente in bolitas: # intentamos que priorice bolitas?
+                            coste_paso = 0.5
+                        elif siguiente in super_bolitas:
+                            coste_paso = 0.1
+
+                        coste_paso += mapa_peligro.get(siguiente, 0)
+
+                        nuevo_coste_g = g_n + coste_paso  
+
+                        # Comprobamos si el nodo ya se ha visitado y si el nuevo camino es más barato
+                        if siguiente not in visitados or nuevo_coste_g < visitados[siguiente]:
+                            visitados[siguiente] = nuevo_coste_g
+                            # Guardamos de qué nodo venimos
+                            padres[siguiente] = actual
+
+                            # f(n) = g(n) + h(n)
+
+                            # h(n): Heurística admisible (El mínimo de las 3 distancias posibles)
+                            # 1. Distancia Manhattan directa
+                            h_directo = abs(siguiente[0] - meta[0]) + abs(siguiente[1] - meta[1])
+                            # 2. Distancia cruzando por la izquierda (siguiente -> Izq -> Der -> Meta)
+                            h_izq = (siguiente[0] + abs(siguiente[1] - y_tunel)) + 1 + ((constantes.columnas_mapa - 1 - meta[0]) + abs(y_tunel - meta[1]))
+                            # 3. Distancia cruzando por la derecha (siguiente -> Der -> Izq -> Meta)
+                            h_der = ((constantes.columnas_mapa - 1 - siguiente[0]) + abs(siguiente[1] - y_tunel)) + 1 + (meta[0] + abs(y_tunel - meta[1]))
+
+                            h_n = min(h_directo, h_izq, h_der)
+                            prioridad = nuevo_coste_g + h_n
+
+                            heapq.heappush(frontera, (prioridad, nuevo_coste_g, siguiente))
+        return [] # Devuelve vacío si no se encuentra solución
+
+    def transformar_en_movimiento(self, nodo_origen, camino):
+        '''
+        Función auxiliar.
+        Traduce el camino (el siguiente paso), en vectores de velocidad (dx, dy) de Pygame.
+        '''
+        if camino and len(camino) > 1:
+            next_node = camino[1] # El índice 0 es el nodo actual, el 1 es el siguiente nodo 
+            # Calculamos la diferencia entre la casilla a la que vamos y en la que estamos
+            dx_grid = next_node[0] - nodo_origen[0]
+            dy_grid = next_node[1] - nodo_origen[1]
+            
+            # Añadimos la mecánica del portal 
+            # Si el salto es 1 a la derecha (ej: de x=14 a x=15 -> 15-14 = 1)
+            # Si cruzamos el portal hacia la derecha (ej: de x=27 a x=0 -> 0-27 = -27)
+            if dx_grid == 1 or dx_grid < -1:
+                self.dx, self.dy = constantes.velocidad, 0
+            # Si el salto es 1 a la izquierda (ej: de x=15 a x=14 -> 14-15 = -1)
+            # Si cruzamos el portal hacia la izquierda (ej: de x=0 a x=27 -> 27-0 = 27)
+            elif dx_grid == -1 or dx_grid > 1:
+                self.dx, self.dy = -constantes.velocidad, 0
+            # En el eje Y no hay portal
+            elif dy_grid == 1:
+                self.dx, self.dy = 0, constantes.velocidad
+            elif dy_grid == -1:
+                self.dx, self.dy = 0, -constantes.velocidad
+        else:
+            self.dx, self.dy = 0, 0 # hemos llegado o no hay camino
+
+    
+    def distancia_con_portales(self, px1, py1, px2, py2, ancho_px, y_tunel_px):
+        '''
+        Función auxiliar.
+        Calcula la distancia usando la distancia Manhattan y contemplando que podemos teletrasportarnos por los portales.
+        '''
+        # Distancia Manhattan normal
+        dist_directa = abs(px1 - px2) + abs(py1 - py2)
+        #Distancia cruzando por el túnel (entrando por la izquierda)
+        dist_izq = (px1 + abs(py1 - y_tunel_px)) + constantes.tamano_celda + ((ancho_px - px2) + abs(y_tunel_px - py2))
+        #Distancia cruzando por el túnel (entrando por la derecha)
+        dist_der = ((ancho_px - px1) + abs(py1 - y_tunel_px)) + constantes.tamano_celda + (px2 + abs(y_tunel_px - py2))
+
+        return min(dist_directa, dist_izq, dist_der)
+
+    def calculamos_aura_peligro(self, lista_fantasmas, mapa_logico):
+        '''
+        Función auxiliar.
+        Aplica el algoritmo BFS para expandir el aura de los fantasmas amenazantes.
+        '''
+        mapa_peligro = {}
+        if lista_fantasmas:
+            for f in lista_fantasmas:
+                
+                #apetecible = (f.controlador.estado == "asustado")
+                es_peligroso = f.controlador.estado not in ["ojos", "asustado"]
+                se_acaba_susto = f.controlador.estado == "asustado" and f.aviso_fin_asustado == True
+
+                if es_peligroso or se_acaba_susto: 
+                    
+                    # Discretizamos las posiciones de los fantasmas que puedan atacar a Pacman
+                    nodo_fantasma = (f.forma.centerx // constantes.tamano_celda, (f.forma.centery - constantes.offset_y_mapa) // constantes.tamano_celda)
+
+                    # Penalizaciones en función de la distancia [0,1,2,3]
+                    penalizaciones = constantes.penalizaciones[:-1]
+                    direcciones = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+
+                    # Usamos una cola para generar el aura de peligro
+                    cola_aura_peligro = deque([(nodo_fantasma, 0)]) 
+                    visitados_aura_peligro = {nodo_fantasma}
+
+                    while cola_aura_peligro:
+
+                        (cx,cy), distancia = cola_aura_peligro.popleft() 
+                        
+                        # Asignación directa desde la lista (acceso instantáneo)
+                        penalizacion = penalizaciones[distancia]
+                                
+                        # Si se solapan auras de varios fantasmas, nos quedamos con el peligro más alto
+                        mapa_peligro[(cx, cy)] = max(mapa_peligro.get((cx, cy), 0), penalizacion)
+
+                        # Solo hacemos que 'fluya' el aura de peligro 3 casillas
+                        if distancia < 3:
+                            for dx, dy in direcciones:
+                                nx, ny = cx + dx, cy + dy
+                                
+                                # Comprobamos límites de mapa, que no sea un muro y que no se formen ciclos
+                                if 0 <= ny < constantes.filas_mapa and 0 <= nx < constantes.columnas_mapa:
+                                    if mapa_logico[ny][nx] != "1" and (nx, ny) not in visitados_aura_peligro:
+                                        visitados_aura_peligro.add((nx, ny))
+                                        cola_aura_peligro.append(((nx, ny), distancia + 1))
+        return mapa_peligro
+    
+    def calulamos_meta_bolita(self, rect_actual, bolitas, super_bolitas, lista_fantasmas, mapa_peligro):
+        # Seleccionamos la meta
+        def coste_utilidad_bolita(bolita):
+            dist_pacman = self.distancia_con_portales(rect_actual.centerx, rect_actual.centery, 
+                bolita.centerx, bolita.centery, constantes.ancho_px, constantes.y_tunel_px)
+            
+            # Consultamos el peligro de la casilla donde está la bolita
+            bx = bolita.x // constantes.tamano_celda
+            by = (bolita.y - constantes.offset_y_mapa) // constantes.tamano_celda
+            
+            peligro_casilla = mapa_peligro.get((bx, by), 0)
+
+            return dist_pacman + peligro_casilla
+
+        meta_bolita = min(bolitas, key=coste_utilidad_bolita)
+        return meta_bolita
+
+class IA:
+    def __init__(self):
+        self.dx = 0
+        self.dy = 0
+
+        # Variables auxiliares para el modo Debug
+        self.mapa_peligro_debug = {}    # Contiene el mapa de peligro para dibujarlo
+        self.meta_bolita_debug  = None  # Contiene el objetivo  
+        self.camino_debug       = []    # Contiene el camino calculado por A* para dibujarlo
+        self.modo_elegido_debug  = ""   # Contiene el modo elegido 
+        self.utilidad_debug        = []   # Puntuaciones de cada bolita (entre 0 y 1) *****
+
+        # Variables para fijar el objetivo
+        self.objetivo_fijo = None   # Objetivo actual 
+        self.modo_fijo     = ""     # Modo en el que se fijó el objetivo
+
+    def obtener_movimiento(self, rect_actual=None, muros=None, objetivo=None, lista_fantasmas=[], 
+                           mapa_logico=None,bolitas=None, super_bolitas=None, **kwargs):
+        '''
+        Pipeline principal de decisión de la IA. Se ejecutará solo si Pac-Man está alineado con la cuadrícula.
+        1º. Construye el mapa de peligro alrededor de los fantasmas mediante BFS
+        2º. Evalua la amenaza (número de fantasmas cercanos o si está acorralado)
+        3º. Selecciona el objetivo (con tres modos distintos, dependiendo de la amenaza: cazar, super-bolita o bolita segura)
+        4º. Calcula el camino óptimo usando A*
+        5º. Traduce el camino en el siguiente movimiento (dx,dy)
+        '''
+
+        # Cuando no hay bolitas (aunque debe finalizar el nivel, por si acaso)
+        if not bolitas or not mapa_logico:
+            return 0, 0
+        # Solo calculamos un nuevo camino si estamos alineados en la cuadrícula
+        if rect_actual.x % constantes.tamano_celda != 0 or rect_actual.y % constantes.tamano_celda != 0:
+            return self.dx, self.dy
+
+        # Variables utiles para los cálculos
+        tam    = constantes.tamano_celda
+        offset = constantes.offset_y_mapa
+        # Tranformamos la posición de pixeles a coordenadas de la cuadrícula (nodo del grafo)
+        px, py   = rect_actual.centerx, rect_actual.centery
+        nodo_origen = (px // tam, (py - offset) // tam)
+
+        # 1º. Construimos el aura de peligro al rededor de los fantasmas mediante BFS
+        # primero vemos qué fantasmas son peligrosos (podemos apurar más el peligro de los asustados?)
+        fantasmas_peligrosos = [f for f in lista_fantasmas if f.controlador.estado in ("perseguir", "dispersion") or 
+                                (f.controlador.estado == "asustado" and f.apuramos_asustado)]
+        mapa_peligro  = self.calculamos_aura_peligro(fantasmas_peligrosos, mapa_logico)
+        self.mapa_peligro_debug = mapa_peligro
+
+        # 2º. Analizamos la amenaza 
+        cant_f_peligrosos_cerca = sum(1 for f in fantasmas_peligrosos
+            if (px -  f.forma.centerx)*(px -  f.forma.centerx) + 
+            (py - f.forma.centery)*(py - f.forma.centery) < constantes.radio_super*constantes.radio_super)
+            #if self.distancia_con_portales(px,py,f.forma.centerx,f.forma.centery) < constantes.radio_super)
+
+        # por ahora no pongo lo de acorralado -------
+        # acorralado = mapa_peligro.get(nodo_origen, 0) >= 1000
+        
+        # Vemos si es necesario ir a buscar la super-bolita
+        super = (cant_f_peligrosos_cerca >= 2) # or acorralado
+
+        # Precalculamos un mapa de bonificaciones por si conviene comer superbolitas
+        mapa_bolitas = self.mapa_bolitas_recompensas(bolitas, super_bolitas, tam, offset, super)
+
+        # Elegimos el mejor objetivo 
+        nuevo_objetivo = self.elegir_objetivo(px, py, bolitas, super_bolitas, lista_fantasmas, mapa_peligro, cant_f_peligrosos_cerca, fantasmas_peligrosos)
+        nuevo_modo = self.modo_elegido_debug
+
+
+        # Mantenemos el objetivo si no es necesario cambiarlo
+        # Modo 1: los fantasmas se mueven, así que nunca fijamos objetivo (siempre recalculamos)
+        # Modos 2 y 3: fijamos el objetivo hasta que se consuma o cambie el modo activo evitando que Pac-Man se quede pillado indeciso a donde ir
+        if nuevo_modo == "Caza":
+            obj = nuevo_objetivo
+            self.objetivo_fijo = None    # Reseteamos la memoria por si veníamos del modo 3
+            self.modo_fijo = nuevo_modo
+        else:
+            # Comprobamos si el objetivo fijado sigue existiendo en el mapa (no se ha comido aún)
+            candidatos_vivos = bolitas + super_bolitas 
+            objetivo_vivo = (self.objetivo_fijo is not None and any(self.objetivo_fijo is c for c in candidatos_vivos))
+            # Cambiamos de objetivo si el actual ya no existe o si hemos cambiado de modo
+            cambio_modo = nuevo_modo != self.modo_fijo
+
+            # El objetivo se ha vuelto peligroso (un fantasma está a 2 casillas o menos de él)
+            objetivo_peligroso = False
+            if self.objetivo_fijo is not None:
+                obj_col  = self.objetivo_fijo.x // tam
+                obj_fila = (self.objetivo_fijo.y - offset) // tam
+                objetivo_peligroso = mapa_peligro.get((obj_col, obj_fila), 0) >= 10000
+
+            # Nos hemos alejado demasiado del objetivo fijado
+            objetivo_lejano = False
+            if self.objetivo_fijo is not None:
+                dist_obj = self.distancia_con_portales(px, py, self.objetivo_fijo.centerx, self.objetivo_fijo.centery)
+                objetivo_lejano = dist_obj > constantes.radio_bolita_optima * 1.5
+
+            if not objetivo_vivo or cambio_modo or objetivo_peligroso or objetivo_lejano:
+                self.objetivo_fijo = nuevo_objetivo
+                self.modo_fijo     = nuevo_modo
+ 
+            obj = self.objetivo_fijo
+
+
+        
+        if obj:
+            self.meta_bolita_debug = obj
+            # Hacemos la división entera de 'meta_bolita' para obtener la coordenada de la cuadrícula
+            obj_dis = ( obj.x // tam, (obj.y - offset) // tam)
+
+            # Aplicamos el Algoritmo A* weighted (con peso de los fantasmas)
+            camino = self.a_star_search(nodo_origen, obj_dis, mapa_logico, mapa_peligro, mapa_bolitas)
+            self.camino_debug = camino
+            #sleep(0.5)
 
             # Traducimos en cinemática (vector de movimiento) el camino calculado
             self.transformar_en_movimiento(nodo_origen, camino)
         return self.dx, self.dy
 
-    def a_star_search(self, nodo_origen, meta, mapa_logico, mapa_peligro):
+    def calculamos_aura_peligro(self, fantasmas_peligrosos, mapa_logico):
+        '''
+        Aplica el algoritmo BFS para expandir el aura de los fantasmas peligrosos.
+        El aura son 4 casillas con penalizaciones decrecientes (5000, 2000, 1000, 500, 200) según las casillas
+        Detrás del fantasma solo será 1/2 del peligro correspondiente y tras muros no hay peligro. 
+        Si varias auras se solapan, nos quedamos con la penalización más alta
+        '''
+        mapa_peligro = {}
+        if not fantasmas_peligrosos:
+            return mapa_peligro
+        
+        tam          = constantes.tamano_celda
+        offset       = constantes.offset_y_mapa
+
+        direcciones  = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+
+
+        for f in fantasmas_peligrosos:
+            # Discretizamos las posiciones de los fantasmas que puedan atacar a Pacman
+            nodo_fantasma = (f.forma.centerx // tam, (f.forma.centery - offset) // tam)
+            fx,fy = nodo_fantasma
+
+            # Obtenemos la dirección del fantasma (para luego reducir el peligro a su espalda)
+            fdx = 1 if f.dx > 0 else (-1 if f.dx < 0 else 0)
+            fdy = 1 if f.dy > 0 else (-1 if f.dy < 0 else 0)
+            tiene_direccion = (fdx != 0 or fdy != 0)
+
+
+            # Implementamos BFS con una cola para generar el aura de peligro con 4 niveles
+            cola_aura_peligro = deque([(nodo_fantasma, 0)]) # (coord, distancia = nivel)
+            visitados_aura_peligro = {nodo_fantasma}
+
+            while cola_aura_peligro:
+
+                (cx,cy), distancia = cola_aura_peligro.popleft() 
+                
+                # Obtenemos la penalización según el nivel (distancia)
+                penalizacion = constantes.penalizaciones[distancia]
+                  
+                # En caso de que la casilla sea detrás del fantasma reducimos su peligro
+                if tiene_direccion and distancia > 0:
+                    # comprobamos si la casilla está en la dirección contraria al movimiento
+                    dir_aura = (cx - fx) * fdx + (cy - fy) * fdy 
+                    if dir_aura < 0:
+                        penalizacion = penalizacion // 2
+                
+                # Si se solapan auras de varios fantasmas, nos quedamos con el peligro más alto
+                mapa_peligro[(cx, cy)] = max(mapa_peligro.get((cx, cy), 0), penalizacion)
+
+                # Solo hacemos que 'fluya' el aura de peligro 4 casillas
+                if distancia < 4:
+                    for dx, dy in direcciones:
+                        # añadimos la nueva casilla (nx, ny)
+                        nx, ny = cx + dx, cy + dy
+                        # Comprobamos límites de mapa, que no sea un muro y que no se formen ciclos
+                        if (0 <= ny < constantes.filas_mapa and 0 <= nx < constantes.columnas_mapa and
+                            mapa_logico[ny][nx] != "1" and (nx, ny) not in visitados_aura_peligro):
+                            visitados_aura_peligro.add((nx, ny))
+                            cola_aura_peligro.append(((nx, ny), distancia + 1)) #añadimos con un nivel más
+        return mapa_peligro
+
+    def mapa_bolitas_recompensas(self, bolitas, super_bolitas, tam, offset, super = True):
+        """
+        Celdas con bolita cuestan un poco menos de atravesar en A*.
+        Efecto: el camino se 'curva' para recoger bolitas de camino al objetivo.
+        El bonus es < 1 para no hacer la heurística inadmisible en la práctica.
+        """
+        mapa = {}
+        for b in bolitas: # Si la bolita es normal 
+            mapa[(b.x // tam, (b.y - offset) // tam)] = 0.5 
+        for sb in (super_bolitas or []):
+            if not super: # en caso de no necesitarla, la intentamos guardar para más tarde
+                mapa[(sb.x // tam, (sb.y - offset) // tam)] = 4  
+        return mapa
+
+        nuevo_objetivo = self.elegir_objetivo(px, py, bolitas, super_bolitas, lista_fantasmas, mapa_peligro, cant_f_peligrosos_cerca, fantasmas_peligrosos)
+    def elegir_objetivo(self, px, py, bolitas, super_bolitas,lista_fantasmas, mapa_peligro, n_fant_peligrosos, fantasmas_peligrosos):
+        """
+        Elige el objetivo según 3 modos. Se prioriza el primer modelo, luego el segundo y si no el tercero
+        Modo caza (1): cazar fantasmas asustados si están accesibles   
+        Modo super (2): ir a por suber-bolita si le sacaríamos provecho
+        Modo bolitas (3): bolita más segura y densa de un radio
+        """
+
+        tam = constantes.tamano_celda
+
+        asustados  = [f for f in lista_fantasmas if f.controlador.estado == "asustado"]
+
+        # Modo caza (1)
+        if asustados:
+            cazables = self.fantasmas_cazables(px,py,asustados)
+            if cazables:
+                self.modo_elegido_debug = "Caza" 
+                # El más cercano entre los que sí da tiempo 
+                _, objetivo = min(cazables, key=lambda x: x[0])
+                return objetivo.forma
+
+        # Modo super (2)    
+        if super_bolitas and n_fant_peligrosos >= 2:
+            sb_elegida = next((sb for sb in super_bolitas if (px - sb.centerx)*(px - sb.centerx) + 
+                               (py - sb.centery)*(py - sb.centery) < constantes.radio_super*constantes.radio_super), None)
+            if sb_elegida:
+                self.modo_elegido_debug = "Sb"
+
+        # Modo bolitas (3) ── bolita óptima (seguridad + densidad - distancia)
+        self.modo_elegido_debug = "Bolitas"
+
+        # Las super-bolitas no valen la pena comerlas (intentaremos penalizarlas, a menos que solo queden estas) 
+        # El A* también las penalizará para que el camino las rodee.
+        candidatos = bolitas if bolitas else super_bolitas # siempre no vacío (sino habríamos acabado la partida)
+        return self.bolita_optima(px, py, candidatos, fantasmas_peligrosos, mapa_peligro)
+
+    
+
+    # def bolita_optima(self, px, py, candidatos, peligrosos, mapa_peligro):
+    #     """
+    #     Selecciona la bolita por utilidad.
+    #     Maximiza: peso_seguridad * seguridad + peso_densidad * densidad + peso_distancia * distancia
+
+    #     seguridad = distancia al fantasma peligroso más cercano  (0 si no hay)
+    #     densidad = favorecer zonas con muchas bolitas juntas
+    #     distancia = busca la bolita más lejana en un radio dado (si no hay en el radio, la más cercana de fuera)
+
+    #     Los pesos son dinámicos: cuanto más cerca esté un fantasma, más importante es la seguridad.
+    #     """
+
+    #     if not candidatos:
+    #         return None
+
+    #     tam, offset = constantes.tamano_celda, constantes.offset_y_mapa
+    #     radio_densidad   = 3 * tam   # radio densidad en píxeles Manhattan 
+
+    #     # ── Pesos dinámicos según peligro real ────────────────────────────────
+    #     if peligrosos:
+    #         dist_min = min(abs(f.forma.centerx - px) + abs(f.forma.centery - py) for f in peligrosos)
+    #         casillas = dist_min // tam
+    #         if casillas < 4:        # Fantasma muy cerca: priorizamos la supervivencia
+    #             W_SEG, W_DEN, W_DIST = 8.0, 1.0, 1.0
+    #         elif casillas < 8:      # Zona de precaución: equilibrio seguridad con eficiencia
+    #             W_SEG, W_DEN, W_DIST = 3.0, 3.0, 1.0
+    #         else:                   # Relativamente seguro: maximizar eficiencia de bolitas
+    #             W_SEG, W_DEN, W_DIST = 1.0, 3.0, 1.0
+    #     else:
+    #      W_SEG, W_DEN, W_DIST = 0.0, 3.0, 1.0 # No hay fantasmas- Solo recogemos
+
+        
+    #     # Precalculamos los centros de todos los candidatos para el cálculo de densidad.
+    #     # Evitamos recalcular por cada bolita evaluada (de O(n²) a O(n) por bolita)
+    #     centros = [(b.centerx, b.centery) for b in candidatos]
+
+    #     def utilidad(b):
+    #         dist = self.distancia_con_portales(px, py, b.centerx, b.centery)
+
+    #         densidad = sum(1 for (bxs, bys) in centros if abs(b.centerx - bxs) + abs(b.centery - bys) <= radio_densidad)
+
+    #         # Peligro directo de la casilla destino (ya calculado en el BFS)
+    #         bx_col  = b.x // tam
+    #         by_fila = (b.y - offset) // tam
+    #         peligro = mapa_peligro.get((bx_col, by_fila), 0)
+
+    #         if not peligrosos:
+    #             # Sin peligro: solo nos importa la densidad y la distancia
+    #             return W_DEN * densidad - W_DIST * dist
+
+    #         seg = min(abs(f.forma.centerx - b.centerx) +
+    #                   abs(f.forma.centery - b.centery) for f in peligrosos)
+
+    #         return W_SEG * seg + W_DEN * densidad - W_DIST * dist - peligro * 0.01
+
+    #     util = [(utilidad(b), b) for b in candidatos]
+    #     if util:
+    #         s_min = min(s for s, _ in util)
+    #         s_max = max(s for s, _ in util)
+    #         rango = max(s_max - s_min, 1)
+    #         self.utilidad_debug = [(b, (s - s_min) / rango) for s, b in util]
+
+
+    #     return max(candidatos, key=utilidad)
+
+    def bolita_optima(self, px, py, candidatos, peligrosos, mapa_peligro):
+        '''
+        Fija una circunferencia alrededor de Pac-Man y elige la bolita más segura dentro de ella.
+        La seguridad se mide como la distancia Manhattan al fantasma peligroso más cercano.
+        Si no hay ninguna bolita dentro del radio, devuelve la más cercana fuera.
+        A* se encargará de recoger las bolitas intermedias de camino al objetivo.
+        '''
+        if not candidatos:
+            return None
+       
+        dentro = []
+        fuera  = []
+        for b in candidatos:
+            dist_pacman = (px - b.centerx)*(px - b.centerx)+(py - b.centery)*(py - b.centery)
+            #dist_pacman = self.distancia_con_portales(px, py, b.centerx, b.centery)
+            if dist_pacman <= constantes.radio_bolita_optima*constantes.radio_bolita_optima :
+                dentro.append(b)
+            else:
+                fuera.append((dist_pacman, b))
+
+        if dentro:
+            def seguridad(b):
+                if not peligrosos:
+                    return 0  # Sin fantasmas todas son igual de seguras
+                return min(abs(f.forma.centerx - b.centerx) + abs(f.forma.centery - b.centery) for f in peligrosos)
+
+            # Guardamos puntuaciones normalizadas para el modo Debug
+            utiles = [(seguridad(b), b) for b in dentro]
+            s_min = min(s for s, _ in utiles)
+            s_max = max(s for s, _ in utiles)
+            rango = max(s_max - s_min, 1)
+            self.utilidad_debug = [(b, (s - s_min) / rango) for s, b in utiles]
+
+            return max(dentro, key=seguridad)  # La más alejada de los fantasmas dentro del radio
+
+        # Si no hay bolitas en el radio, cogemos la más cercana fuera
+        return min(fuera, key=lambda x: x[0])[1]
+    
+
+    def a_star_search(self, nodo_origen, meta, mapa_logico, mapa_peligro, mapa_bolitas):
         '''
         Implementación del algoritmo A*.
         Minimiza una heurística admisible que contempla el teletransporte por el portal.
@@ -138,7 +676,8 @@ class IA:
                     if mapa_logico[siguiente[1]][siguiente[0]] != "1":  # Seguiremos con el camino si el siguiente nodo no es un muro
 
                         # g(n): Coste acumulado  
-                        coste_paso = 1 + mapa_peligro.get(siguiente, 0)
+                        #coste_paso = 1 + mapa_peligro.get(siguiente, 0)
+                        coste_paso = max(0.1, 1 + mapa_peligro.get(siguiente, 0) - mapa_bolitas.get(siguiente, 0))
                         nuevo_coste_g = g_n + coste_paso  
 
                         # Comprobamos si el nodo ya se ha visitado y si el nuevo camino es más barato
@@ -157,90 +696,13 @@ class IA:
                             # 3. Distancia cruzando por la derecha (siguiente -> Der -> Izq -> Meta)
                             h_der = ((constantes.columnas_mapa - 1 - siguiente[0]) + abs(siguiente[1] - y_tunel)) + 1 + (meta[0] + abs(y_tunel - meta[1]))
 
-                            h_n = min(h_directo, h_izq, h_der)
+                            h_n = min(h_directo, h_izq, h_der) * 0.3
                             prioridad = nuevo_coste_g + h_n
 
                             heapq.heappush(frontera, (prioridad, nuevo_coste_g, siguiente))
         return [] # Devuelve vacío si no se encuentra solución
 
-    def distancia_con_portales(self, px1, py1, px2, py2, ancho_px, y_tunel_px):
-        '''
-        Función auxiliar.
-        Calcula la distancia usando la distancia Manhattan y contemplando que podemos teletrasportarnos por los portales.
-        '''
-        # Distancia Manhattan normal
-        dist_directa = abs(px1 - px2) + abs(py1 - py2)
-        #Distancia cruzando por el túnel (entrando por la izquierda)
-        dist_izq = (px1 + abs(py1 - y_tunel_px)) + constantes.tamano_celda + ((ancho_px - px2) + abs(y_tunel_px - py2))
-        #Distancia cruzando por el túnel (entrando por la derecha)
-        dist_der = ((ancho_px - px1) + abs(py1 - y_tunel_px)) + constantes.tamano_celda + (px2 + abs(y_tunel_px - py2))
 
-        return min(dist_directa, dist_izq, dist_der)
-
-    def calculamos_aura_peligro(self, lista_fantasmas, mapa_logico):
-        '''
-        Función auxiliar.
-        Aplica el algoritmo BFS para expandir el aura de los fantasmas amenazantes.
-        '''
-        mapa_peligro = {}
-        if lista_fantasmas:
-            for f in lista_fantasmas:
-
-                es_peligroso = f.controlador.estado not in ["ojos", "asustado"]
-                se_acaba_susto = f.controlador.estado == "asustado" and f.aviso_fin_asustado == True
-
-                if es_peligroso or se_acaba_susto: 
-                    
-                    # Discretizamos las posiciones de los fantasmas que puedan atacar a Pacman
-                    nodo_fantasma = (f.forma.centerx // constantes.tamano_celda, (f.forma.centery - constantes.offset_y_mapa) // constantes.tamano_celda)
-
-                    # Penalizaciones en función de la distancia [0,1,2,3]
-                    penalizaciones = [5000, 2000, 1000, 500]
-                    direcciones = [(0, -1), (0, 1), (-1, 0), (1, 0)]
-
-                    # Usamos una cola para generar el aura de peligro
-                    cola_aura_peligro = deque([(nodo_fantasma, 0)]) 
-                    visitados_aura_peligro = {nodo_fantasma}
-
-                    while cola_aura_peligro:
-
-                        (cx,cy), distancia = cola_aura_peligro.popleft() 
-                        
-                        # Asignación directa desde la lista (acceso instantáneo)
-                        penalizacion = penalizaciones[distancia]
-                                
-                        # Si se solapan auras de varios fantasmas, nos quedamos con el peligro más alto
-                        mapa_peligro[(cx, cy)] = max(mapa_peligro.get((cx, cy), 0), penalizacion)
-
-                        # Solo hacemos que 'fluya' el aura de peligro 3 casillas
-                        if distancia < 3:
-                            for dx, dy in direcciones:
-                                nx, ny = cx + dx, cy + dy
-                                
-                                # Comprobamos límites de mapa y que no sea un muro 
-                                if 0 <= ny < constantes.filas_mapa and 0 <= nx < constantes.columnas_mapa:
-                                    if mapa_logico[ny][nx] != "1" and (nx, ny) not in visitados_aura_peligro:
-                                        visitados_aura_peligro.add((nx, ny))
-                                        cola_aura_peligro.append(((nx, ny), distancia + 1))
-        return mapa_peligro
-    
-    def calulamos_meta_bolita(self, rect_actual, bolitas, super_bolitas, lista_fantasmas, mapa_peligro):
-        # Seleccionamos la meta
-        def coste_utilidad_bolita(bolita):
-            dist_pacman = self.distancia_con_portales(rect_actual.centerx, rect_actual.centery, 
-                bolita.centerx, bolita.centery, constantes.ancho_px, constantes.y_tunel_px)
-            
-            # Consultamos el peligro de la casilla donde está la bolita
-            bx = bolita.x // constantes.tamano_celda
-            by = (bolita.y - constantes.offset_y_mapa) // constantes.tamano_celda
-            
-            peligro_casilla = mapa_peligro.get((bx, by), 0)
-
-            return dist_pacman + peligro_casilla
-
-        meta_bolita = min(bolitas, key=coste_utilidad_bolita)
-        return meta_bolita
-    
     def transformar_en_movimiento(self, nodo_origen, camino):
         '''
         Función auxiliar.
@@ -268,6 +730,41 @@ class IA:
                 self.dx, self.dy = 0, -constantes.velocidad
         else:
             self.dx, self.dy = 0, 0 # hemos llegado o no hay camino
+
+    
+    def distancia_con_portales(self, px1, py1, px2, py2):
+        '''
+        Función auxiliar.
+        Calcula la distancia usando la distancia Manhattan y contemplando que podemos teletrasportarnos por los portales.
+        '''
+        ancho_px = constantes.ancho_px
+        y_tunel_px = constantes.y_tunel_px
+        # Distancia Manhattan normal
+        dist_directa = abs(px1 - px2) + abs(py1 - py2)
+        #Distancia cruzando por el túnel (entrando por la izquierda)
+        dist_izq = (px1 + abs(py1 - y_tunel_px)) + constantes.tamano_celda + ((ancho_px - px2) + abs(y_tunel_px - py2))
+        #Distancia cruzando por el túnel (entrando por la derecha)
+        dist_der = ((ancho_px - px1) + abs(py1 - y_tunel_px)) + constantes.tamano_celda + (px2 + abs(y_tunel_px - py2))
+
+        return min(dist_directa, dist_izq, dist_der)
+
+    
+    def fantasmas_cazables(self, px, py, asustados):
+        """
+        Filtra los fantasmas asustados en función de si están muy lejos o si no sería seguro perseguirlos
+        """
+        cazables = []
+
+        for f in asustados:
+            fx = f.forma.centerx
+            fy = f.forma.centery
+            dist = (px-fx)*(px-fx)+(py-fy)*(py-fy)
+            #dist = self.distancia_con_portales(px, py, f.forma.centerx, f.forma.centery)
+            if not f.apuramos_asustado and dist < constantes.radio_caza*constantes.radio_caza: # Si está asustado simplemente o parpadeando pero queda margen de tiempo (añadir por distancia?)
+                cazables.append((dist, f))  
+        return cazables   # Lista de (distancia, fantasma) puede estar vacía
+
+
 class ControladorFantasmaPadre:
     '''
     Clase padre de todos los fantasmas.

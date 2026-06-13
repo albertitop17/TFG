@@ -39,6 +39,7 @@ class Fantasma(EnteFisico):
             for direccion, coords in constantes.FANTASMA_ESTADOS_ESPECIALES['ojos'].items()  }
 
         self.aviso_fin_asustado = False # Variable para decirle al fantasma que su tiempo de "asustado" se acaba
+        self.apuramos_asustado = False
 
         self.imagen = self.frames['derecha'][0] # Inicializamos la imagen con el primer frame de animación
         
