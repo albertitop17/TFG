@@ -278,7 +278,7 @@ class Game:
 
         # reseteamos el sistema de oleadas (dispersión/persecución) 
         self.modo_global = "dispersion"
-        self.tiempo_cambio_modo = pygame.time.get_ticks()
+        self.tiempo_cambio_modo = pygame.time.get_as()
         self.tiempo_asustado = 0
 
     def morir(self):
