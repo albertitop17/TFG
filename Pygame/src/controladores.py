@@ -293,9 +293,14 @@ class IA_Segura:
         return meta_bolita
 
 class IA_Ptos:
-    def __init__(self):
+    def __init__(self, radio_caza=None, radio_super=None, radio_bolita_optima=None):
         self.dx = 0
         self.dy = 0
+
+        # Variables para poder alterarlas en los experimentos
+        self.radio_caza          = radio_caza          if radio_caza          is not None else constantes.radio_caza
+        self.radio_super         = radio_super         if radio_super         is not None else constantes.radio_super
+        self.radio_bolita_optima = radio_bolita_optima if radio_bolita_optima is not None else constantes.radio_bolita_optima
 
         # Variables auxiliares para el modo Debug
         self.mapa_peligro_debug = {}    # Contiene el mapa de peligro para dibujarlo
@@ -343,11 +348,7 @@ class IA_Ptos:
         # 2º. Analizamos la amenaza 
         cant_f_peligrosos_cerca = sum(1 for f in fantasmas_peligrosos
             if (px -  f.forma.centerx)*(px -  f.forma.centerx) + 
-            (py - f.forma.centery)*(py - f.forma.centery) < constantes.radio_super*constantes.radio_super)
-            #if self.distancia_con_portales(px,py,f.forma.centerx,f.forma.centery) < constantes.radio_super)
-
-        # por ahora no pongo lo de acorralado -------
-        # acorralado = mapa_peligro.get(nodo_origen, 0) >= 1000
+            (py - f.forma.centery)*(py - f.forma.centery) < self.radio_super*self.radio_super)
         
         # Vemos si es necesario ir a buscar la super-bolita
         super = (cant_f_peligrosos_cerca >= 2) # or acorralado
@@ -385,7 +386,7 @@ class IA_Ptos:
             objetivo_lejano = False
             if self.objetivo_fijo is not None:
                 dist_obj = self.distancia_con_portales(px, py, self.objetivo_fijo.centerx, self.objetivo_fijo.centery)
-                objetivo_lejano = dist_obj > constantes.radio_bolita_optima * 1.5
+                objetivo_lejano = dist_obj > self.radio_bolita_optima * 1.5
 
             if not objetivo_vivo or cambio_modo or objetivo_peligroso or objetivo_lejano:
                 self.objetivo_fijo = nuevo_objetivo
@@ -508,7 +509,7 @@ class IA_Ptos:
         # Modo super (2)    
         if super_bolitas and n_fant_peligrosos >= 2:
             sb_elegida = next((sb for sb in super_bolitas if (px - sb.centerx)*(px - sb.centerx) + 
-                               (py - sb.centery)*(py - sb.centery) < constantes.radio_super*constantes.radio_super), None)
+                               (py - sb.centery)*(py - sb.centery) < self.radio_super*self.radio_super), None)
             if sb_elegida:
                 self.modo_elegido_debug = "Sb"
                 return sb_elegida 
@@ -602,7 +603,7 @@ class IA_Ptos:
         for b in candidatos:
             dist_pacman = (px - b.centerx)*(px - b.centerx)+(py - b.centery)*(py - b.centery)
             #dist_pacman = self.distancia_con_portales(px, py, b.centerx, b.centery)
-            if dist_pacman <= constantes.radio_bolita_optima*constantes.radio_bolita_optima :
+            if dist_pacman <= self.radio_bolita_optima*self.radio_bolita_optima :
                 dentro.append(b)
             else:
                 fuera.append((dist_pacman, b))
@@ -763,7 +764,7 @@ class IA_Ptos:
             fy = f.forma.centery
             dist = (px-fx)*(px-fx)+(py-fy)*(py-fy)
             #dist = self.distancia_con_portales(px, py, f.forma.centerx, f.forma.centery)
-            if not f.apuramos_asustado and dist < constantes.radio_caza*constantes.radio_caza: # Si está asustado simplemente o parpadeando pero queda margen de tiempo (añadir por distancia?)
+            if not f.apuramos_asustado and dist < self.radio_caza*self.radio_caza: # Si está asustado simplemente o parpadeando pero queda margen de tiempo (añadir por distancia?)
                 cazables.append((dist, f))  
         return cazables   # Lista de (distancia, fantasma) puede estar vacía
 

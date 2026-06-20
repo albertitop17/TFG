@@ -11,12 +11,11 @@ tamano_celda = 20
 
 # Dimensiones del mapa original (29 filas x 28 columnas)
 ancho_ventana = 28 * tamano_celda  # 560 pixeles
-alto_ventana = 35 * tamano_celda   # 700 pixeles
+alto_ventana = 35 * tamano_celda   # 700 pixeles (3 + 29 + 3) -> (60 + 580 + 60)
 
 # Espacio reservado en la parte superior para el HUD (marcador y vidas)
 offset_y_mapa = 3 * tamano_celda  # 60 pixeles
 #Espacio reservado en la parte inferior para el HUD  # 60 píxeles
-
 
 # Los personajes medirán exactamente lo mismo que la celda, haciendo posible que accedan de forma precisa
 alto_personaje = tamano_celda
@@ -47,6 +46,12 @@ factor_proyectar = tamano_celda // velocidad
 
 # Temporizador de la máquina de estados de los fantasmas (Dispersión <-> Persecución) 
 duraciones_oleada = [7, 20]
+
+# Duración (en segundos) del estado asustado y de sus avisos.
+# Se exponen aquí para  para convertirlas a frames en el motor.
+susto_total_s    = 8   # tiempo total que los fantasmas están asustados
+susto_parpadeo_s = 5   # instante en el que empiezan a parpadear (aviso visual)
+susto_peligro_s  = 7   # instante a partir del cual dejan de ser cazables (apuramos_asustado)
 
 # Bolitas necesarias para liberar a  [Blinky, Pinky, Inky, Clyde] al incio del juego
 bolitas_para_liberarse = [0, 5, 15, 20]
