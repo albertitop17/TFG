@@ -41,7 +41,7 @@ class Game:
         ]
         
         # Variables de Estado Lógico
-        self.vidas = 6
+        self.vidas = 3
         self.puntuacion = 0
         self.bolitas_comidas = 0 # Para liberar al incio a los fantasmas
         self.game_over = False
@@ -68,20 +68,21 @@ class Game:
                 self.run = False
             if evento.type == pygame.KEYDOWN: # Evento -> presionamos una tecla
 
-                if evento.key == pygame.K_SPACE: # El espacio sirve para alternar el cerebro de Pacman entre la IA o ser controlado por el jugador
-                    if isinstance(self.jugador.controlador, controladores.IA):
+                if evento.key == pygame.K_SPACE: 
+                    # El espacio sirve para alternar el cerebro de Pacman entre la IA o ser controlado por el jugador
+                    if isinstance(self.jugador.controlador, controladores.IA_Ptos):
                         self.jugador.controlador = controladores.Humano()
                         print("Pac-Man controlado por el Jugador")
                     elif isinstance(self.jugador.controlador, controladores.Humano):
-                        self.jugador.controlador = controladores.IA()
+                        self.jugador.controlador = controladores.IA_Ptos()
                         print("Pac-Man controlado por la IA (A*) por puntos")
 
                 if evento.key == pygame.K_i: # Añado el cerebro de supervivenciad
-                    if isinstance(self.jugador.controlador, controladores.IAs):
+                    if isinstance(self.jugador.controlador, controladores.IA_Segura):
                         self.jugador.controlador = controladores.Humano()
                         print("Pac-Man controlado por el Jugador")
                     elif isinstance(self.jugador.controlador, controladores.Humano):
-                        self.jugador.controlador = controladores.IAs()
+                        self.jugador.controlador = controladores.IA_Segura()
                         print("Pac-Man controlado por la IA (A*) por supervivencia")
 
                 if evento.key == pygame.K_0: # Solo por prueba: Pulsando el 0 podemos controlar a Blinky manualmente (podríamos usar otras teclas)
@@ -155,7 +156,7 @@ class Game:
                         # Volvemos al estado normal
                         fantasma.controlador.estado = "perseguir"
                         # Les devolvemos la velocidad normal y giran 180º
-                        # En caso de que por reducir la velocidad se quedasen en un pixel impar les obligamos a moverse a uno par
+                        # En caso de que por reducir la velocidada se quedasen en un pixel impar les obligamos a moverse a uno par
                         self.forzar_giro_180(fantasma, constantes.velocidad, invertir=False)
                         self.sincronizar_cuadricula(fantasma)
     
@@ -219,7 +220,7 @@ class Game:
         texto_puntos = self.fuente_marcador.render(f"SCORE: {self.puntuacion}", True, (255, 255, 255))
         self.pantalla.blit(texto_puntos, (10, 5))
 
-        vidas = self.fuente_marcador.render(f"VIDAS: {6-self.vidas}", True, (255, 255, 255)) # Puesto por ahora para mostrar cuantas vidas usa
+        vidas = self.fuente_marcador.render(f"VIDAS: {3-self.vidas}", True, (255, 255, 255)) # Puesto por ahora para mostrar cuantas vidas usa
         self.pantalla.blit(vidas, (430, 5))
 
         pygame.display.update() # Actualizamos la pantalla para mostrar los cambios
@@ -261,10 +262,10 @@ class Game:
         tam_celda = constantes.tamano_celda
         centro_x = 13 * tam_celda
         posiciones_fantasmas = [
-            (centro_x, 14 * tam_celda),      # Blinky
-            (centro_x, 17 * tam_celda), # Pinky
-            (centro_x + tam_celda, 17 * tam_celda),      # Inky
-            (centro_x + 2*tam_celda, 17 * tam_celda)  # Clyde
+            (centro_x, 13 * tam_celda),                 # Blinky
+            (centro_x, 17 * tam_celda),                 # Pinky
+            (centro_x + tam_celda, 17 * tam_celda),     # Inky
+            (centro_x + 2*tam_celda, 17 * tam_celda)    # Clyde
         ]
         for i, fantasma in enumerate(self.fantasmas):
             fantasma.forma.x, fantasma.forma.y = posiciones_fantasmas[i]
@@ -278,7 +279,7 @@ class Game:
 
         # reseteamos el sistema de oleadas (dispersión/persecución) 
         self.modo_global = "dispersion"
-        self.tiempo_cambio_modo = pygame.time.get_as()
+        self.tiempo_cambio_modo = pygame.time.get_ticks()
         self.tiempo_asustado = 0
 
     def morir(self):
@@ -324,7 +325,7 @@ class Game:
         tiempo_simulado = 0
         pygame.time.get_ticks = lambda: tiempo_simulado
 
-        self.jugador.controlador = controladores.IA()
+        self.jugador.controlador = controladores.IA_Ptos()
         print("sim,muertes,puntuacion,nivel_superado,frames,tiempo_sim_s")
 
         for partida in range(numero_partidas):

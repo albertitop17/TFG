@@ -9,12 +9,14 @@ En caso de querer modificar una variable, solo se tendrá que cambiar aquí.
 #  El tamaño de la celda es vital que encaje tanto con el mapa como con los personajes
 tamano_celda = 20
 
-# Dimensiones del mapa original (28 columnas x 35 filas)
+# Dimensiones del mapa original (29 filas x 28 columnas)
 ancho_ventana = 28 * tamano_celda  # 560 pixeles
 alto_ventana = 35 * tamano_celda   # 700 pixeles
 
 # Espacio reservado en la parte superior para el HUD (marcador y vidas)
 offset_y_mapa = 3 * tamano_celda  # 60 pixeles
+#Espacio reservado en la parte inferior para el HUD  # 60 píxeles
+
 
 # Los personajes medirán exactamente lo mismo que la celda, haciendo posible que accedan de forma precisa
 alto_personaje = tamano_celda

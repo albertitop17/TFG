@@ -39,7 +39,7 @@ class Humano:
         return self.dx, self.dy
     
 
-class IAs:
+class IA_Segura:
     '''
     Agente autónomo que controla a Pacman.
     Utiliza Búsqueda en Grafos (A*) junto con zonas de peligro.
@@ -55,6 +55,9 @@ class IAs:
     
     def obtener_movimiento(self, rect_actual = None, muros = None, objetivo=None, lista_fantasmas=None, 
                            mapa_logico=None, bolitas=None, super_bolitas=None, **kwargs):
+        '''
+        COMENTARLO!!
+        '''
         
         # Tendremos q poner que cuando acabe las bolitas acabe el nivel (por ahora se queda quieto)
         if not bolitas or not mapa_logico:
@@ -139,6 +142,7 @@ class IAs:
                         next_x = constantes.columnas_mapa - 1 # Salto a la derecha ((actual-(-1,0))%ancho_mapa )
                     elif actual[0] == constantes.columnas_mapa - 1 and dx == 1: # Análogo por la derecha
                         next_x = 0 # Salto a la izquierda
+
                 siguiente = (next_x, next_y)
 
                 # Comprobamos los límites del mapa (por si acaso, aunque no debería de ser necesario) 
@@ -149,10 +153,10 @@ class IAs:
                         # g(n): Coste acumulado  
                         coste_paso = 1
 
-                        if siguiente in bolitas: # intentamos que priorice bolitas?
-                            coste_paso = 0.5
-                        elif siguiente in super_bolitas:
-                            coste_paso = 0.1
+                        # if siguiente in bolitas: # intentamos que priorice bolitas?
+                        #     coste_paso = 0.5
+                        # elif siguiente in super_bolitas:
+                        #     coste_paso = 0.1
 
                         coste_paso += mapa_peligro.get(siguiente, 0)
 
@@ -288,7 +292,7 @@ class IAs:
         meta_bolita = min(bolitas, key=coste_utilidad_bolita)
         return meta_bolita
 
-class IA:
+class IA_Ptos:
     def __init__(self):
         self.dx = 0
         self.dy = 0
@@ -477,10 +481,9 @@ class IA:
             mapa[(b.x // tam, (b.y - offset) // tam)] = 0.5 
         for sb in (super_bolitas or []):
             if not super: # en caso de no necesitarla, la intentamos guardar para más tarde
-                mapa[(sb.x // tam, (sb.y - offset) // tam)] = 4  
+                mapa[(sb.x // tam, (sb.y - offset) // tam)] = -4  
         return mapa
 
-        nuevo_objetivo = self.elegir_objetivo(px, py, bolitas, super_bolitas, lista_fantasmas, mapa_peligro, cant_f_peligrosos_cerca, fantasmas_peligrosos)
     def elegir_objetivo(self, px, py, bolitas, super_bolitas,lista_fantasmas, mapa_peligro, n_fant_peligrosos, fantasmas_peligrosos):
         """
         Elige el objetivo según 3 modos. Se prioriza el primer modelo, luego el segundo y si no el tercero
@@ -508,6 +511,7 @@ class IA:
                                (py - sb.centery)*(py - sb.centery) < constantes.radio_super*constantes.radio_super), None)
             if sb_elegida:
                 self.modo_elegido_debug = "Sb"
+                return sb_elegida 
 
         # Modo bolitas (3) ── bolita óptima (seguridad + densidad - distancia)
         self.modo_elegido_debug = "Bolitas"
@@ -516,7 +520,6 @@ class IA:
         # El A* también las penalizará para que el camino las rodee.
         candidatos = bolitas if bolitas else super_bolitas # siempre no vacío (sino habríamos acabado la partida)
         return self.bolita_optima(px, py, candidatos, fantasmas_peligrosos, mapa_peligro)
-
     
 
     # def bolita_optima(self, px, py, candidatos, peligrosos, mapa_peligro):
@@ -537,7 +540,7 @@ class IA:
     #     tam, offset = constantes.tamano_celda, constantes.offset_y_mapa
     #     radio_densidad   = 3 * tam   # radio densidad en píxeles Manhattan 
 
-    #     # ── Pesos dinámicos según peligro real ────────────────────────────────
+    #     # Pesos dinámicos según peligro real 
     #     if peligrosos:
     #         dist_min = min(abs(f.forma.centerx - px) + abs(f.forma.centery - py) for f in peligrosos)
     #         casillas = dist_min // tam
@@ -676,8 +679,8 @@ class IA:
                     if mapa_logico[siguiente[1]][siguiente[0]] != "1":  # Seguiremos con el camino si el siguiente nodo no es un muro
 
                         # g(n): Coste acumulado  
-                        #coste_paso = 1 + mapa_peligro.get(siguiente, 0)
-                        coste_paso = max(0.1, 1 + mapa_peligro.get(siguiente, 0) - mapa_bolitas.get(siguiente, 0))
+                        #coste_paso = 1 + fantasmas - bonificación
+                        coste_paso =  1 + mapa_peligro.get(siguiente, 0) - mapa_bolitas.get(siguiente, 0)
                         nuevo_coste_g = g_n + coste_paso  
 
                         # Comprobamos si el nodo ya se ha visitado y si el nuevo camino es más barato
@@ -696,7 +699,7 @@ class IA:
                             # 3. Distancia cruzando por la derecha (siguiente -> Der -> Izq -> Meta)
                             h_der = ((constantes.columnas_mapa - 1 - siguiente[0]) + abs(siguiente[1] - y_tunel)) + 1 + (meta[0] + abs(y_tunel - meta[1]))
 
-                            h_n = min(h_directo, h_izq, h_der) * 0.3
+                            h_n = min(h_directo, h_izq, h_der) * 0.5
                             prioridad = nuevo_coste_g + h_n
 
                             heapq.heappush(frontera, (prioridad, nuevo_coste_g, siguiente))
@@ -795,7 +798,9 @@ class ControladorFantasmaPadre:
         self.ruta_debug = [] # Lista para las 4 posiciones futuras
         
     def obtener_movimiento(self, rect_actual, muros, objetivo=None, lista_fantasmas=None, **kwargs):
-
+        '''
+        Gestiona la máquina de estados. En función de en qué estado se ecnuentre el fantasma seguirá una mecánica de movimiento. 
+        '''
         if not self.liberado: return 0, 0
 
         # Solo calculamos un nuevo camino si estamos alineados en la cuadrícula

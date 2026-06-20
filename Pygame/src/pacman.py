@@ -111,7 +111,7 @@ class Pacman(EnteFisico):
 
 
 
-            # Debug Clase IA
+            # Debug Clase IA_Ptos
             else:
                 # Gradiente de utilidad sobre las bolitas candidatas (rojo = peor, verde = mejor)
                 for bolita, t in self.controlador.utilidad_debug:
@@ -132,7 +132,7 @@ class Pacman(EnteFisico):
                 if meta:
                     pygame.draw.circle(interfaz, (0, 255, 0), meta.center, 8, 2)
 
-                # Capa 4: camino A* con soporte para el salto de túnel
+                # Camino A* con soporte para el salto de túnel
                 camino = self.controlador.camino_debug
                 if camino and len(camino) > 1:
                     y_tunel  = constantes.tunel
