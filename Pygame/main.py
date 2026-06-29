@@ -56,7 +56,8 @@ class Game:
 
         # Mapa
         self.mapa = Mapa(self.config.mapa)
-        self.muros_pacman = self.mapa.muros + [self.mapa.puerta_rect]  # añadimos la puerta como muro solo para Pac-Man
+        puerta_colision = pygame.Rect(constantes.x_puerta, 11 * constantes.tamano_celda + constantes.offset_y_mapa, constantes.ancho_puerta, constantes.tamano_celda)
+        self.muros_pacman = self.mapa.muros + [puerta_colision]  # añadimos la puerta como muro solo para Pac-Man
 
         # Pacman
         self.spawn_pacman = (13 * constantes.tamano_celda, 24 * constantes.tamano_celda) # Guardamos la variable para luego poder reaparecer
