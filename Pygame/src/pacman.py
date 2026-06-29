@@ -17,8 +17,7 @@ class Pacman(EnteFisico):
         self.frame_tiempo = pygame.time.get_ticks() # Almacenamos el tiempo actual para controlar la velocidad de la animación
         self.rotate = 0 # Ángulo de rotación de la animación (en grados)
 
-        # Para optimizar memoria y rendimiento, extraemos del sprite las coordenadas de la imagen y las escalamos 1 sola vez al 
-        # instanciar el objeto Pacman.
+        # Precargamos los sprites al instanciar para no escalar en cada frame
         self.frames = [escalar_imagen(imagen_entera.subsurface(coordenadas), constantes.escala_personaje) 
                        for coordenadas in constantes.PACMAN_COORDENADAS['derecha']] 
         self.imagen = self.frames[0] # Inicializamos la imagen con el primer frame de animación
@@ -107,10 +106,6 @@ class Pacman(EnteFisico):
                                 pygame.draw.line(interfaz, (0, 255, 0), (ancho_px, p2[1]), p2, 3)
                         else:
                             pygame.draw.line(interfaz, (0, 255, 0), p1, p2, 3)
-
-
-
-
             # Debug Clase IA_Ptos
             else:
                 # Gradiente de utilidad sobre las bolitas candidatas (rojo = peor, verde = mejor)
@@ -132,7 +127,7 @@ class Pacman(EnteFisico):
                 if meta:
                     pygame.draw.circle(interfaz, (0, 255, 0), meta.center, 8, 2)
 
-                # Camino A* con soporte para el salto de túnel
+                # Dinujamos el camino de A* contando el túnel
                 camino = self.controlador.camino_debug
                 if camino and len(camino) > 1:
                     y_tunel  = constantes.tunel
@@ -142,7 +137,7 @@ class Pacman(EnteFisico):
                     for i in range(1, len(puntos)):
                         n1, n2 = camino[i - 1], camino[i]
                         p1, p2 = puntos[i - 1], puntos[i]
-                        # Detectamos el salto de túnel: misma fila y columnas en extremos opuestos
+                        # Si es el túnel: misma fila y columnas en extremos opuestos
                         if n1[1] == y_tunel and n2[1] == y_tunel and abs(n1[0] - n2[0]) > 1:
                             if n2[0] < n1[0]:   # Sale por la derecha, entra por la izquierda
                                 pygame.draw.line(interfaz, (0, 255, 0), p1, (ancho_px, p1[1]), 3)
@@ -153,7 +148,7 @@ class Pacman(EnteFisico):
                         else:
                             pygame.draw.line(interfaz, (0, 255, 0), p1, p2, 3)
 
-                # Etiqueta del modo activo con fondo semitransparente
+                # Indicamos el modo acivo
                 modo = self.controlador.modo_elegido_debug
                 if modo:
                     colores_modo = {"Caza": (255, 80, 80), "Sb":(255, 200, 50), "Bolitas": (80, 220, 120)}
@@ -165,10 +160,8 @@ class Pacman(EnteFisico):
                     interfaz.blit(texto,  (13, 30))
 
 
-
-
         # Renderizado del sprite con la rotado a la dirección de movimiento
-        imagen_dr = pygame.transform.rotate(self.imagen, self.rotate) # se podría usar distintas sub-superficies del sprite (como en los fantasmas)
+        imagen_dr = pygame.transform.rotate(self.imagen, self.rotate) 
         
         # Dibujamos a Pacman superponiendo la imagen sobre su hitbox
         interfaz.blit(imagen_dr, self.forma) 

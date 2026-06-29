@@ -118,11 +118,6 @@ class EnteFisico:
             self.forma.right = dimensiones[0] 
         elif self.forma.right > dimensiones[0]: #si el personaje se sale por la derecha
             self.forma.left = 0
-        
-        # elif self.forma.top < 0: #si el personaje se sale por arriba
-        #     self.forma.bottom = dimensiones[1]
-        # elif self.forma.bottom > dimensiones[1]: #si el personaje se sale por abajo
-        #     self.forma.top = 0
 
     # Funciones vacías que serán sobrescritas las clases hijas (Pacman y Fantasma)
     def actualizar_animacion(self): pass

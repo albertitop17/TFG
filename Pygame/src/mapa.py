@@ -5,8 +5,8 @@ class Mapa:
     '''
     Transoforma la matriz lógica de strings de constantes.py en objetos físicos de Pygame (pygame.Rect)
     '''
-    def __init__(self):
-        self.matriz = constantes.MAPA
+    def __init__(self, matriz):
+        self.matriz = matriz if matriz is not None else constantes.MAPA
         self.tamano_celda = constantes.tamano_celda 
         self.offset_y = constantes.offset_y_mapa # Desplazamos el mapa en el eje Y para dejar espacio al HUD arriba
 

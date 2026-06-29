@@ -17,9 +17,8 @@ class Fantasma(EnteFisico):
         self.frame_index = 0 # # Variable para controlar el frame de animación
         self.frame_tiempo = pygame.time.get_ticks() # Almacenamos el tiempo actual para controlar la velocidad de la animación
 
-        # Para optimizar memoria y rendimiento, extraemos del sprite las coordenadas de las imagenes y las escalamos 1 sola vez al 
-        # instanciar el objeto Fantasma. Lo hacemos por cada dirección (pues no son simétricos como Pacman).
-
+        # Pre-cargamos los sprites al instanciar para no escalar en cada frame
+        
         # Fantasma normal (Persecución o Dispersión)
         self.frames = {
             direccion: [
@@ -48,18 +47,16 @@ class Fantasma(EnteFisico):
         '''
         Actualiza la imagen del sprite separado en 2 lógicas:
         - Primero mediante la dirección a la que va determinamos donde tienen que mirar los ojos del fantasma.
-        - Después 
-        - Luego realizamos un ciclo de animaciones de los fantasmas mediante el reloj interno
+        - Luego realizamos un ciclo de animaciones de los fantasmas
         '''
          # Obtenemos la orientación basada en el vector de velocidad (dx, dy)
         if self.dx > 0: direccion_visual = 'derecha'
         elif self.dx < 0: direccion_visual = 'izquierda'
         elif self.dy > 0: direccion_visual = 'abajo'
         else: direccion_visual = 'arriba'
-        
             
-         # Animaciones por frame
-        cooldown_animaciones = constantes.cooldown_animaciones # Tiempo transcurrido entre el cambio de fotograma (120 ms)
+        # Animaciones por frame
+        cooldown_animaciones = constantes.cooldown_animaciones # Tiempo transcurrido entre el cambio de fotograma
         tiempo_actual = pygame.time.get_ticks()
         
         # Distinguimos casos en función del estado del fantasma: (perseguir, asustado o ojos) 
@@ -98,12 +95,12 @@ class Fantasma(EnteFisico):
         
         # DEBUG (tenemos 2 modos debug distintos)
         if not modo_debug or self.controlador.estado == "asustado":
-            return # Si no hay debug, ahorramos comprobaciones
+            return # Si no hay debug
 
         # Tomamos el color correspondiente en el diccionario de colores
         color_linea = constantes.colores_debug.get(self.color, (255, 255, 255))
 
-        # Modo 1: Solo mostrar valores de las cajas heurísticas y el vector que apunta al objetivo 
+        # Modo 1: Solo mostramos los valores de la heurística en las casillas y el vector que apunta al objetivo 
         if modo_debug == 1 and hasattr(self.controlador, 'objetivo_debug') and self.controlador.objetivo_debug:
             
             meta = self.controlador.objetivo_debug
@@ -113,16 +110,18 @@ class Fantasma(EnteFisico):
                 pivote = self.controlador.pivote_debug
                 blinky_pos = self.controlador.blinky_debug
                 if self.controlador.estado == "perseguir":
-                    # Línea 1: Desde Blinky hasta el pivote (Gris claro)
+                    # Línea desde Blinky hasta el pivote (Gris claro)
                     pygame.draw.line(interfaz, (200, 200, 200), blinky_pos, pivote, 2)
-                    # Línea 2: Desde el pivote hasta la meta (Gris claro)
+                    # Línea desde el pivote hasta la meta (Gris claro)
                     pygame.draw.line(interfaz, (200, 200, 200), pivote, meta, 2)
-                # Dibujar el pivote como un círculo
-                pygame.draw.circle(interfaz, (150, 150, 150), pivote, 6)
+                    # Dibujamos el pivote como un círculo
+                    pygame.draw.circle(interfaz, (150, 150, 150), pivote, 6)
+                    pygame.draw.line(interfaz, color_linea, self.forma.center, meta, 2)
+                else:
+                    pygame.draw.line(interfaz, color_linea, self.forma.center, blinky_pos, 2)
                 
             else: # Para el resto de fantasmas: Dibujamos un vector directamente al objetivo
                 pygame.draw.line(interfaz, color_linea, self.forma.center, meta, 2)
-
 
             # Calculamos la esquina superior izquierda restando la mitad del ancho/alto (12/2 = 6)
             interfaz.fill(color_linea, (meta[0] - 6, meta[1] - 6, 12, 12))
@@ -139,8 +138,7 @@ class Fantasma(EnteFisico):
 
             for i, pos in enumerate(ruta):
                 radio = 7 - (i * 2) 
-                pygame.draw.circle(interfaz, color_linea, pos, radio)
-                
+                pygame.draw.circle(interfaz, color_linea, pos, radio)                
                 if i > 0:
                     pygame.draw.line(interfaz, color_linea, ruta[i-1], pos, 2)
                 else:

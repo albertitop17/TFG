@@ -40,7 +40,6 @@ FPS = 60
 # Escalamos los sprites a nuestro tamaño de celda
 escala_personaje = tamano_celda / 15.0
 
-
 # Multiplicador para calcular cuántos pasos forman una celda entera en función de nuestra velocidad (usado en calcular_mejor_dir en controladores)
 factor_proyectar = tamano_celda // velocidad
 
@@ -48,9 +47,9 @@ factor_proyectar = tamano_celda // velocidad
 duraciones_oleada = [7, 20]
 
 # Duración (en segundos) del estado asustado y de sus avisos.
-# Se exponen aquí para  para convertirlas a frames en el motor.
+# Al final se usan en frames.
 susto_total_s    = 8   # tiempo total que los fantasmas están asustados
-susto_parpadeo_s = 5   # instante en el que empiezan a parpadear (aviso visual)
+susto_parpadeo_s = 5   # instante en el que empiezan a parpadear (aviso visual fantasmas blancos)
 susto_peligro_s  = 7   # instante a partir del cual dejan de ser cazables (apuramos_asustado)
 
 # Bolitas necesarias para liberar a  [Blinky, Pinky, Inky, Clyde] al incio del juego
@@ -61,29 +60,27 @@ penalizaciones = [50000, 20000, 10000, 5000, 2000]
 
 # Direcciones posibles en las que puede ir Pac-Man
 direcciones  = [(0, -1), (0, 1), (-1, 0), (1, 0)]
-# # *******************************
-# SEGUNDOS_PARPADEO = 3          # tiempo restante cuando empieza a parpadear
-# MARGEN_CAZA      = 0.7         # margen de seguridad (el fantasma también se mueve)
 
-radio_caza = 7*tamano_celda
-radio_super = 7*tamano_celda
-radio_bolita_optima = 8*tamano_celda
-# Activador del modo Debug: dibujado de rutas y objetivos 
+# Radios del modelo IA_Ptos
+radio_caza = 12*tamano_celda
+radio_super = 8*tamano_celda
+radio_bolita_optima = 6*tamano_celda
+
+# Activador del modo Debug para dibujar rutas y objetivos 
 DEBUG = False
 
-# GRAFICADO (DICCIONARIO DE ANIMACIONES)
+# Colores para usar en cada fantasma el color correspondiente
 
 colores_debug = {
         'rojo': (255, 0, 0),
         'rosa': (255, 184, 255),
         'azul': (0, 255, 255),
-        'naranja': (255, 184, 82)
-    }
+        'naranja': (255, 184, 82)}
 
 # Cooldown de las animaciones (en ms)
 cooldown_animaciones = 120
 
-# Formato: 'clave': [(x, y, ancho, alto),...] del Sprite Sheet
+# Formato: 'clave': [(x, y, ancho, alto),...] del sprite sheet
 PACMAN_COORDENADAS = {
     'quieto': [(0, 0, 16, 16)], 
     'derecha': [ 

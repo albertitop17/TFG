@@ -5,37 +5,39 @@ from src import controladores
 from src.pacman import Pacman
 from src.fantasma import Fantasma
 from src.mapa import Mapa 
-from config_sim import ConfigSimulacion
+from sim.config_sim import ConfigSimulacion
+
 
 DEBUG = constantes.DEBUG
 class Game:
     '''
     Clase Principal (Motor del juego)
-    Controla el bucle del juego, instanciando las entidades, gestionando colisiones y actuando como máquina de estados (dispersion <-> perseguir)
+    Controla el bucle del juego, instanciando las entidades, gestionando colisiones y cambiando los estados de los fantasmas
 
     Todas las dinámicas temporales (oleadas dispersión/persecución y duración del estado asustado) se miden en frames 
     Así el movimiento y los temporizadores comparten una única unidad: 1 frame
-    A 60 FPS, 1 frame es aprox 16.67 ms, de modo que una oleada de 7 seg equivale a 7*60 = 420 frames.
-
+    
     Para jugar: Game().run_game()  (config=None -> con ventana y sprites).
-    Para simular: Game(ConfigSimulacion(headless=True)).simular_una_partida().
+    Para simular: Game(ConfigSimulacion(sin_ventana=True)).simular_una_partida().
     '''
 
     def __init__(self, config = None):
         
-        # config=None significa "juego real": con ventana, sprites y control humano.
+        # Si config es None se inicializa el código principal: con ventana, y los 3 posibles controladores.
         if config is None:
-            config = ConfigSimulacion(headless=False, vidas=3)
+            config = ConfigSimulacion(sin_ventana=False, vidas=3)
+        
+        # Obtenemos qué tipo de partida se debe ejecutar
         self.config = config
-        self.headless = config.headless
+        self.sin_ventana = config.sin_ventana
 
         # Inicializamos el motor de Pygame
         pygame.init()
         # Inicializamos las fuentes por si acaso (aunque pygame.init() debería hacerlo)
         pygame.font.init() 
 
-        
-        if self.headless:
+        # En función de la configuración escogida, se crea o no la pantalla principal
+        if self.sin_ventana:
             # No se renderiza nada
             self.pantalla = None
             sprite = pygame.Surface((256, 256), pygame.SRCALPHA) # Sprite falso para que no falle
@@ -46,44 +48,40 @@ class Game:
             sprite = pygame.image.load("assets//graficos//sheet_pacman_personajes.png").convert_alpha()
 
 
-        # Creamos el Mapa y las Entidades
         self.sprite = sprite
         self.reloj = pygame.time.Clock() # Para controlar los FPS
         self.run = True
 
+        # Ahora creamos el mapa, a Pac-Man y a los fantasmas
+
         # Mapa
-        self.mapa = Mapa() 
+        self.mapa = Mapa(self.config.mapa)
+        self.muros_pacman = self.mapa.muros + [self.mapa.puerta_rect]  # añadimos la puerta como muro solo para Pac-Man
 
         # Pacman
         self.spawn_pacman = (13 * constantes.tamano_celda, 24 * constantes.tamano_celda) # Guardamos la variable para luego poder reaparecer
 
-        if self.headless: # En simulación lo controla la IA desde el inicio (con sus radios)
-            ctrl_pacman = controladores.IA_Ptos(radio_caza=self.config.radios_ia.get("radio_caza"),radio_super=self.config.radios_ia.get("radio_super"),
-                    radio_bolita_optima=self.config.radios_ia.get("radio_bolita_optima"))
+        # Elegimos el controlador. En caso de la IA_Ptos inicializamos los radios de caza, super y bolita
+        if self.sin_ventana:
+            if self.config.controlador_pacman == controladores.IA_Ptos:
+                ctrl_pacman = controladores.IA_Ptos(radio_caza=self.config.radios_ia.get("radio_caza"),radio_super=self.config.radios_ia.get("radio_super"),
+                        radio_bolita_optima=self.config.radios_ia.get("radio_bolita_optima"))
+            else:
+                ctrl_pacman = self.config.controlador_pacman()
         else:
-            # Controlador provisional. El real se elige luego
+            # Controlador provisional para cuando se juega con ventana. El real se elige luego
             ctrl_pacman = controladores.Humano()
 
         self.jugador = Pacman(x=self.spawn_pacman[0], y=self.spawn_pacman[1], imagen_entera=sprite, controlador=ctrl_pacman)
 
-         # Fantasmas (a partir de la configuración)
+        # Fantasmas (a partir de la configuración, para así poder extrapolarlo y hacer experimentos en un futuro)
         self.fantasmas = self.crear_fantasmas()
-
-        # # Fantasmas: Lista de fantasmas: (x, y, color, cerebro)
-        # tam_celda = constantes.tamano_celda
-        # centro_x = 13 * tam_celda
-        # self.fantasmas = [
-        #     Fantasma(x=centro_x              , y=13 * tam_celda, imagen_entera=sprite, controlador=controladores.CerebroBlinky(), color='rojo'),
-        #     Fantasma(x=centro_x              , y=15 * tam_celda, imagen_entera=sprite, controlador=controladores.CerebroPinky(),  color='rosa'),
-        #     Fantasma(x=centro_x + tam_celda  , y=16 * tam_celda, imagen_entera=sprite, controlador=controladores.CerebroInky(),   color='azul'),
-        #     Fantasma(x=centro_x + 2*tam_celda  , y=17 * tam_celda, imagen_entera=sprite, controlador=controladores.CerebroClyde(),  color='naranja'),
-        # ]
         
-        # Variables de Estado Lógico
-        self.vidas = self.config.vidas 
-        self.puntuacion = 0
-        self.bolitas_comidas = 0 # Para liberar al incio a los fantasmas
-        self.game_over = False
+        # Variables de Estado 
+        self.vidas = self.config.vidas   # Numero de vidas (escogidas en la configuración, 3 por defecto)
+        self.puntuacion = 0              # Contador de la puntuación
+        self.bolitas_comidas = 0         # Para liberar al incio a los fantasmas
+        self.game_over = False           # Indica si la partida ha acabado
 
         # Interfaz y Tipografía
         self.fuente_marcador = pygame.font.SysFont("Arial", 24, bold=True)
@@ -96,27 +94,20 @@ class Game:
         self.frame_cambio_modo = 0      # Frame del último cambio de oleada
         self.modo_global = "dispersion" # El juego empieza siempre en dispersión
 
-        # Duraciones convertidas de segundos a frames (una sola vez)
+        # Duraciones convertidas de segundos a frames (una sola vez). Asi se puede hacer las simulaciones sin fallos.
         self.duraciones_oleada_frames = [s * FPS for s in constantes.duraciones_oleada]
         self.frames_susto    = constantes.susto_total_s    * FPS
         self.frames_parpadeo = constantes.susto_parpadeo_s * FPS
         self.frames_peligro  = constantes.susto_peligro_s  * FPS
         self.bolitas_para_liberarse = [e.liberar_con for e in self.config.fantasmas] # REVISAR ESTA LINEA
 
-        # self.tiempo_asustado = 0 # Se usará como temporizador para alternar las oleadas de dispersión y perseguir
-        # self.modo_global = "dispersion" # El juego empieza siempre en dispersión
-        # self.tiempo_cambio_modo = pygame.time.get_ticks()
-        # self.duraciones_oleada = constantes.duraciones_oleada  # Tiempos en segundos: [Tiempo Dispersión, Tiempo Persecución]
-        # self.bolitas_para_liberarse = constantes.bolitas_para_liberarse
-
         self.modo_debug = 0 # 0: Apagado, 1: Valores (Cajas), 2: Ruta (Prediccion siguientes pasos) 
-
 
     def crear_fantasmas(self):
         '''
-        Instancia los fantasmas descritos en la configuración.
+        Instancia los fantasmas que se hayan establecido en la configuración.
+        Por defecto los 4 originales.
         '''
-
         tam = constantes.tamano_celda
         fantasmas = []
         for e in self.config.fantasmas:
@@ -160,16 +151,16 @@ class Game:
                         if hasattr(f.controlador, 'modo_debug'):
                             f.controlador.modo_debug = self.modo_debug
  
-                # 0: control manual de Blinky (para pruebas)
-                elif evento.key == pygame.K_0:
-                    self.fantasmas[0].controlador = controladores.Humano()
+                # 0: control manual de Blinky (queda comentado pero se podría probar)
+                # elif evento.key == pygame.K_0:
+                #     self.fantasmas[0].controlador = controladores.Humano()
     
     def pausas_visuales(self, ms):
         '''
         Pausa para que quede como el juego real. Pero para la simulación es contraproducente.
         Como no avanza el contador de frames, estas pausas no consumen tiempo de juego (ni de oleada ni de susto)
         '''
-        if not self.headless:
+        if not self.sin_ventana:
             pygame.time.delay(ms)
 
 
@@ -179,15 +170,15 @@ class Game:
         Actualiza el movimiento, trata las colisiones y gestiona las oleadas de los fantasmas (dispersión <-> perseguir). 
         '''
         if self.game_over:
-            return # Por ahora si acaba la partida congelamos todo. Tendremos que añadir animaciones
+            return
         
         # 1 update equivale a 1 frame que equivale a 1 paso de movimiento 
         self.frame += 1
 
         dimensiones = (constantes.ancho_ventana , constantes.alto_ventana)
 
-        # Actualizamos a Pacman ------------------------
-        self.jugador.actualizar(dimensiones=dimensiones, muros=self.mapa.muros, lista_fantasmas=self.fantasmas, 
+        # Actualizamos a Pacman 
+        self.jugador.actualizar(dimensiones=dimensiones, muros=self.muros_pacman, lista_fantasmas=self.fantasmas, 
                                 mapa_logico=self.mapa.matriz, bolitas=self.mapa.bolitas,super_bolitas=self.mapa.super_bolitas)
 
         # Mecánica de comer bolitas: comprobamos si el rectángulo del jugador colisiona con alguna bolita
@@ -198,8 +189,9 @@ class Game:
             self.bolitas_comidas += 1
 
             if self.mapa.bolitas == []:
-                self.game_over = True # Por ahora congelamos todo
+                self.game_over = True # Acaba la partida
 
+            # Mecánica para ir liberando los fantasmas
             for i, fantasma in enumerate(self.fantasmas):
                 # Si está bloqueado y ya hemos comido suficientes bolitas, lo liberamos
                 if not fantasma.controlador.liberado and self.bolitas_comidas >= self.bolitas_para_liberarse[i]:
@@ -241,7 +233,7 @@ class Game:
                         self.forzar_giro_180(fantasma, constantes.velocidad, invertir=False)
                         self.sincronizar_cuadricula(fantasma)
     
-        # Actualizamos los fantasmas --------------------------
+        # Actualizamos los fantasmas
         for fantasma in self.fantasmas: 
             fantasma.actualizar(dimensiones, self.mapa.muros, objetivo=self.jugador, lista_fantasmas=self.fantasmas)
         
@@ -255,6 +247,11 @@ class Game:
                 if fantasma.controlador.estado == "asustado":
                     fantasma.controlador.estado = "ojos"
                     self.puntuacion += 200
+                    if not self.sin_ventana: # Dibujamos el 200 en pantalla durante el delay
+                        sprite_200 = self.sprite.subsurface(pygame.Rect(1, 136, 15, 15)) 
+                        sprite_200 = pygame.transform.scale(sprite_200, (constantes.tamano_celda, constantes.tamano_celda))
+                        self.pantalla.blit(sprite_200, (fantasma.forma.x, fantasma.forma.y))
+                        pygame.display.update()
                     self.pausas_visuales(500) # Pausa al comerse un fantasma 500 ms
                     #volvemos a sincronizarlo a pixel par
                     self.sincronizar_cuadricula(fantasma)
@@ -266,9 +263,7 @@ class Game:
         # Si no estamos en modo asustado (el susto pausa el cronómetro de oleadas)
 
         if self.frame_asustado is None:
-
             frames_oleada_transcurrido = self.frame - self.frame_cambio_modo
-
             # Determinamos cuánto debe durar el modo actual
             duracion_actual = self.duraciones_oleada_frames[0] if self.modo_global == "dispersion" else self.duraciones_oleada_frames[1]
 
@@ -303,25 +298,55 @@ class Game:
         texto_puntos = self.fuente_marcador.render(f"SCORE: {self.puntuacion}", True, (255, 255, 255))
         self.pantalla.blit(texto_puntos, (10, 5))
 
-        vidas = self.fuente_marcador.render(f"VIDAS: {3-self.vidas}", True, (255, 255, 255)) # Puesto por ahora para mostrar cuantas vidas usa
+        vidas = self.fuente_marcador.render(f"VIDAS: {self.vidas}", True, (255, 255, 255)) 
         self.pantalla.blit(vidas, (430, 5))
 
         # Dibujamos el HUD inferior
-
         y_hud = constantes.offset_y_mapa + len(self.mapa.matriz) * constantes.tamano_celda + 4
-        fuente_hud = pygame.font.SysFont("Arial", 13)
- 
-        # Nombre del controlador activo
-        nombre_ctrl = type(self.jugador.controlador).__name__
-        ctrl_txt = fuente_hud.render(f"Ctrl: {nombre_ctrl}", True, (200, 200, 200))
-        self.pantalla.blit(ctrl_txt, (8, y_hud))
- 
-        # Leyenda de teclas
+
+        fuente_ctrl = pygame.font.SysFont("Arial", 20, bold=True)
+        fuente_tecla = pygame.font.SysFont("Arial", 14, bold=True)
+
+        # Color del controlador activo
+        if isinstance(self.jugador.controlador, controladores.Humano):
+            color_ctrl = (255, 255,   0)
+            nombre_ctrl = "Humano"
+        elif isinstance(self.jugador.controlador, controladores.IA_Segura):
+            color_ctrl = (210, 160, 255)
+            nombre_ctrl = "IA Segura"
+        elif isinstance(self.jugador.controlador, controladores.IA_Ptos):
+            color_ctrl = (100, 255, 160)
+            nombre_ctrl = "IA Puntos"
+
+        # Izquierda: nombre del controlador en grande
+        ctrl_surf = fuente_ctrl.render(nombre_ctrl, True, color_ctrl)
+        self.pantalla.blit(ctrl_surf, (10, y_hud + 14))
+
+        # Línea separadora vertical
+        pygame.draw.line(self.pantalla, (60, 60, 60),(175, y_hud + 2), (175, y_hud + 54), 1)
+
+        # Dibujamos las instrucciones en las teclas
         modos_debug = ["Apagado", "Valores", "Ruta", "Peligro"]
-        leyenda = (f"H: Humano   S: IA Segura   P: IA Puntos   "    
-                   f"D: Debug [{modos_debug[self.modo_debug]}]")
-        ley_txt = fuente_hud.render(leyenda, True, (160, 160, 160))
-        self.pantalla.blit(ley_txt, (8, y_hud + 16))
+        teclas = [
+            ("H: Humano", (255, 255, 0), 0, 0),("S: IA Segura", (210, 160, 255), 1, 0),
+            ("P: IA Puntos", (100, 255, 160),   0, 1),
+            (f"D: Debug [{modos_debug[self.modo_debug]}]", (190, 120, 60),   1, 1),
+        ]
+        for texto, color, col, fila in teclas:
+            t = fuente_tecla.render(texto, True, color)
+            self.pantalla.blit(t, (182 + col * 188, y_hud + 6 + fila *  26))
+        
+        if self.game_over: # Se imprime cuando se acaba la partida 
+            if not self.mapa.bolitas: # Se ha acabado ganando
+                texto = "VICTORIA"
+                color = (0, 255, 0)
+            else: # Se ha acabado perdiendo
+                texto =  "DERROTA"
+                color = (255, 50, 50)
+
+            fin = self.fuente_marcador.render(texto, True, color)
+            self.pantalla.blit(fin, (constantes.ancho_ventana // 2 - fin.get_width() // 2, 5))
+        
 
         pygame.display.update() # Actualizamos la pantalla para mostrar los cambios
 
@@ -382,7 +407,7 @@ class Game:
         '''
         self.vidas -= 1
 
-        # Tenemos que añadir aún las animaciones de muerte   
+        # Trabajo futuro: animaciones muerte 
         if self.vidas <= 0:
             self.game_over = True
         else:
@@ -395,32 +420,90 @@ class Game:
         Pantalla previa al juego: el jugador elige con qué controlador empezar.
         Devuelve el controlador seleccionado.
         '''
-        fuente_titulo = pygame.font.SysFont("Arial", 28, bold=True)
-        fuente_op     = pygame.font.SysFont("Arial", 20)
-        fuente_sub    = pygame.font.SysFont("Arial", 15)
+        fuente_op    = pygame.font.SysFont("Arial", 22, bold=True)
+        fuente_tecla = pygame.font.SysFont("Arial", 22)
+        fuente_sub   = pygame.font.SysFont("Arial", 18, bold=True)
  
-        opciones = [("[H]  Humano", controladores.Humano),("[S]  IA Segura", controladores.IA_Segura),("[P]  IA Puntos", controladores.IA_Ptos)]
-        seleccion = 0  # índice resaltado con el teclado (o deja que el usuario pulse directo)
+        opciones = [
+            ("[H]", "Humano",    controladores.Humano,    (255, 255,   0)),
+            ("[S]", "IA Segura", controladores.IA_Segura, (210, 160, 255)),
+            ("[P]", "IA Puntos", controladores.IA_Ptos,   (100, 255, 160)),
+        ]
+
+        seleccion = 0
+        # Logo PAC-MAN del sprite sheet 
+        logo = self.sprite.subsurface(pygame.Rect(85, 172, 191, 47))
+        logo = pygame.transform.scale(logo, (191 * 2, 47 * 2))
  
+        # Frames de Pac-Man mirando a la derecha (4 frames)
+        coords_pac = [(18,0,15,15),(1,0,15,15),(18,0,15,15),(35,0,15,15)]
+        sprites_pac = []
+        for cx, cy, cw, ch in coords_pac:
+            img = self.sprite.subsurface(pygame.Rect(cx, cy, cw, ch))
+            img = pygame.transform.scale(img, (cw * 3, ch * 3))
+            sprites_pac.append(img)
+ 
+        ancho  = constantes.ancho_ventana
+        cx_pan = ancho // 2
+ 
+        # Bolitas distribuidas por toda la pantalla (x, y)
+        bolitas_pos = [
+            # Esquinas
+            (25, 30), (515, 30), (25, 660), (515, 660),
+            # Puestas aleatoriamente para rellenar
+            (100, 25), (200, 40), (310, 22), (420, 38),(80, 670), (180, 655), (290, 672), (390, 658), (490, 668),
+            (20, 130), (30, 220), (18, 320), (28, 420), (22, 520),(530, 130), (540, 230), (528, 340), (535, 440), (525, 540),
+            (60, 260), (480, 255), (55, 340), (490, 335),(65, 415), (475, 420),(100, 490), (440, 485), (100,550),(125,610),
+            (200, 600) ,(280,550), (350, 600), (400, 560), (430,620), (300,440),(230,435),(360,445),(160,440),(420,440)
+        ]
+ 
+        frame_anim = 0
+
         while True:
             self.pantalla.fill((0, 0, 0))
+            frame_anim += 1
+            frame_pac  = (frame_anim // 8) % 4
  
-            # Título
-            titulo = fuente_titulo.render("PAC-MAN  —  Elige controlador", True, (255, 255, 0))
-            self.pantalla.blit(titulo, (constantes.ancho_ventana // 2 - titulo.get_width() // 2, 180))
+            # Dibujamos el logo
+            self.pantalla.blit(logo, (cx_pan - logo.get_width() // 2, 65))
  
-            # Opciones
-            for i, (texto, _) in enumerate(opciones):
-                color = (255, 255, 255) if i == seleccion else (120, 120, 120)
-                op_txt = fuente_op.render(texto, True, color)
-                self.pantalla.blit(op_txt, (constantes.ancho_ventana // 2 - op_txt.get_width() // 2, 260 + i * 40))
+            # Dibujamos bolitas sincronizadas con Pac-Man de decoración
+            r_bolita = 5 if frame_pac != 3 else 3
+            for bx, by in bolitas_pos:
+                pygame.draw.circle(self.pantalla, (255, 184, 174), (bx, by), r_bolita)
+
+            # Lo coloreamos más fuerte si lo estamos seleccionando
+            for i, (tecla, nombre, _, color) in enumerate(opciones):
+                y      = 210 + i * 80
+                es_sel = (i == seleccion)
  
-            # Instrucción
-            sub = fuente_sub.render("Pulsa la tecla entre corchetes o con las flechas + ENTER", True, (100, 100, 100))
-            self.pantalla.blit(sub, (constantes.ancho_ventana // 2 - sub.get_width() // 2, 400))
+                # Fondo de selección
+                rect_sel = pygame.Rect(cx_pan - 140, y - 8, 270, 58)
+                if es_sel:
+                    pygame.draw.rect(self.pantalla, (30, 30, 30), rect_sel, border_radius=8)
+                    pygame.draw.rect(self.pantalla, color, rect_sel, width=2, border_radius=8)
+ 
+                # Tecla y nombre
+                color_txt = color if es_sel else tuple(c // 4 for c in color)
+                t_tecla  = fuente_tecla.render(tecla,  True, color_txt)
+                t_nombre = fuente_op.render(nombre, True, color_txt)
+                self.pantalla.blit(t_tecla,  (cx_pan - 118, y + 10))
+                self.pantalla.blit(t_nombre, (cx_pan -  66, y + 10))
+ 
+                # Pac-Man animado fuera del recuadro
+                if es_sel:
+                    self.pantalla.blit(sprites_pac[frame_pac], (rect_sel.right + 10, y + 6))
+ 
+            # Instrucciones
+            lineas = ["Pulsa la tecla correspondiente","o","mueve con las flechas + ENTER"]
+            for i, linea in enumerate(lineas):
+                surf = fuente_sub.render(linea, True, (210, 210, 210))
+                self.pantalla.blit(surf, (cx_pan - surf.get_width() // 2, 455 + i * 22))
  
             pygame.display.update()
- 
+            self.reloj.tick(60)
+
+            # Gestionamos la selección del modo de juego
             for evento in pygame.event.get():
                 if evento.type == pygame.QUIT:
                     pygame.quit(); raise SystemExit
@@ -436,22 +519,8 @@ class Game:
                     elif evento.key == pygame.K_DOWN:
                         seleccion = (seleccion + 1) % len(opciones)
                     elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                        return opciones[seleccion][1]()
-                    
-    def run_game(self):
-        '''
-        Bucle principal del juego
-        '''
-        self.jugador.controlador = self.pantalla_seleccion()
-
-        while self.run:    
-            self.reloj.tick(constantes.FPS) # Limitamos a 60 fps
-            self.eventos()
-            self.update()
-            self.dibujar()
-
-        pygame.quit()
-    
+                        return opciones[seleccion][2]()
+ 
     def reset_partida(self, semilla=None):
         '''
         Permite hacer una nueva partida sin reiniciar Pygame ni recargar los sprites. 
@@ -475,7 +544,7 @@ class Game:
         self.mapa.bolitas.clear()
         self.mapa.super_bolitas.clear()
 
-        # Reponemos las bolitas, super-boliras y muros (VER SI SE PUEDE SOLO PONER EN EL MAPA LOS MUROS SI NO ES LA PRIMERA VEZ PARA NO TENER Q ESTAR TOD0 EL RATO VACIANDO Y LLENANDO CUANDO NO CAMBIAN)
+        # Reponemos las bolitas y super-bolitas 
         self.mapa.construir_mapa()
 
         # Recolocamos a todos los agentes
@@ -487,7 +556,7 @@ class Game:
     def simular_una_partida(self, semilla=None):
         '''
         Ejecuta una partida completa a máxima velocidad y devuelve sus métricas.
-        Devuelve un dict; el simulador se encarga de volcarlo a CSV.
+        Devuelve un dict; el simulador se encarga de llevarlo al CSV.
         '''
         self.reset_partida(semilla)
         # Bucle del juego sin eventos ni renderidazo ni reloj
@@ -500,5 +569,56 @@ class Game:
                     "frames": self.frame,"tiempo_sim_s": round(self.frame / constantes.FPS, 3)}
         return datos
 
+    def run_game(self):
+        '''
+        Bucle principal del juego
+        '''
+        self.jugador.controlador = self.pantalla_seleccion()
+
+        while self.run:    
+            self.reloj.tick(constantes.FPS) # Limitamos a 60 fps
+            self.eventos()
+            self.update()
+            self.dibujar()
+
+        pygame.quit()
+
 if __name__ == "__main__":
-    Game().run_game()
+    # Vemos qué modo se quiere ejecutar
+    print("\n1 - Jugar\n2 - Simular\n3 - Recorrer valores de un radio")
+    # Pedimos el modo para jugar, en caso de que no pongan uno se inicializa el juego normal
+    opcion = input("Elige el modo a ejecutar: ").strip() or "1" # Strip elimina espacios sin querer 
+
+    if opcion == "1":
+        Game().run_game()
+
+    elif opcion == "2":
+        from sim.simulador import simular
+        from sim.config_sim import ConfigSimulacion
+        from src import controladores
+
+        # En caso de ser una simulación pedimos el modo concreto de controlador a simular
+        print("Elige el controlador de Pac-Man: 1 = IA_Ptos,  2 = IA_Segura")
+        controlador = controladores.IA_Ptos if (input("Controlador: ").strip() or "1") != "2" else controladores.IA_Segura
+
+        numero_partidas = input("Partidas: ").strip()
+        n = int(numero_partidas) if numero_partidas.isdigit() else 10000 # En caso de que no se ponga bien un numero de partidas 
+        csv = input("Nombre del CSV donde escribir (.csv): ").strip() or "resultados.csv" # Si no predeterminado en resultados.csv 
+        consola = (input("¿Quieres imprimir cada partida por pantalla? (s/n): ").strip().lower() == "s")
+
+        simular(config=ConfigSimulacion(sin_ventana=True, controlador_pacman=controlador), n_partidas=n, csv_path=csv, consola = consola)
+
+    elif opcion == "3":
+        from sim.barrido import barrido_radio
+
+        radios = {"1": "radio_caza", "2": "radio_super", "3": "radio_bolita_optima"}
+        print("Elige el radio a recorrer: 1=radio_caza  2=radio_super  3=radio_bolita_optima")
+        nombre = radios.get(input("Radio: ").strip(), "radio_caza") # Si no, se usa el radio de caza
+
+        numero_partidas = input("Cuantas partidas por cada valor del radio: ").strip()
+        n = int(numero_partidas) if numero_partidas.isdigit() else 2500 # En caso de que no se ponga bien, 2500 por defecto
+        png = input(f"Nombre del archivo PNG donde dibujar las gráficas (.png): ").strip() or None # Nombre de la imagen de salida
+        csv = input("Nombre del archivo CSV (.csv) (Enter para no guardar): ").strip() or None
+
+        # Si se quisiese cambia rel predeterminado de los valores de las celdas se hace aqui abajo (trabajo futuro sacarlo fuera)
+        barrido_radio(nombre, valores_celdas=[2, 4, 6, 8, 10, 12, 14], n_partidas=n, png_path=png, csv_path= csv) 
