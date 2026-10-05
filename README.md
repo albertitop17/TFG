@@ -1,3 +1,7 @@
+
+
+https://github.com/user-attachments/assets/b4eea484-bfa1-4d63-aed0-dba56335e054
+
 # TFG -  Diseño de agentes inteligentes para la construcción del juego de Pac-Man
 
 Implementación del juego de Pac-Man en Python con Pygame.
