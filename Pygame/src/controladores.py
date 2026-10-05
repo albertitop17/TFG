@@ -493,7 +493,7 @@ class IA_Ptos:
             sb_elegida = next((sb for sb in super_bolitas if (px - sb.centerx)*(px - sb.centerx) + 
                                (py - sb.centery)*(py - sb.centery) < self.radio_super*self.radio_super), None)
             if sb_elegida:
-                self.modo_elegido_debug = "Sb"
+                self.modo_elegido_debug = "Super-bolita"
                 return sb_elegida 
 
         # Modo Bolitas  

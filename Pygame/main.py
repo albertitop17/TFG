@@ -291,8 +291,11 @@ class Game:
         # Dibujamos a Pacman
         self.jugador.dibujar(self.pantalla, self.modo_debug) 
         
-        # Dibujamos a los fantasmas
-        for fantasma in self.fantasmas:
+        # # Dibujamos a los fantasmas
+        # for fantasma in self.fantasmas:
+        #     fantasma.dibujar(self.pantalla, self.modo_debug)
+        orden = self.fantasmas if (self.frame // 20) % 2 == 0 else reversed(self.fantasmas)
+        for fantasma in orden:
             fantasma.dibujar(self.pantalla, self.modo_debug)
         
         # Dibujamos el HUD superior
@@ -584,6 +587,24 @@ class Game:
 
         pygame.quit()
 
+
+    def ver_partida(self, controlador, semilla):
+        '''
+        Reproduce con ventana una partida concreta a velocidad normal, fijando la semilla 
+        para poder repetir una partida ya simulada (por ejemplo, la de mejor puntuación).
+        Se salta la pantalla de selección de controlador.
+        '''
+        random.seed(semilla)
+        self.jugador.controlador = controlador
+
+        while self.run:
+            self.reloj.tick(constantes.FPS)
+            self.eventos()
+            self.update()
+            self.dibujar()
+
+        pygame.quit()
+
 if __name__ == "__main__":
     # Vemos qué modo se quiere ejecutar
     print("\n1 - Jugar\n2 - Simular\n3 - Recorrer valores de un radio")
@@ -623,3 +644,16 @@ if __name__ == "__main__":
 
         # Si se quisiese cambia rel predeterminado de los valores de las celdas se hace aqui abajo (trabajo futuro sacarlo fuera)
         barrido_radio(nombre, valores_celdas=[2, 4, 6, 8, 10, 12, 14], n_partidas=n, png_path=png, csv_path= csv) 
+
+    elif opcion == "4":
+        from src import controladores
+        Game().ver_partida(controlador=controladores.IA_Ptos(), semilla=648) #7454
+    # from sim.config_sim import ConfigSimulacion
+    # from src import controladores
+
+    # cfg = ConfigSimulacion(sin_ventana=False, controlador_pacman=controladores.IA_Ptos)
+    # juego = Game(cfg)
+    # juego.jugador.controlador = controladores.IA_Ptos()
+    # juego.simular_una_partida(semilla=41)
+
+    

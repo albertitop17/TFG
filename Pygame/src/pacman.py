@@ -108,20 +108,20 @@ class Pacman(EnteFisico):
                             pygame.draw.line(interfaz, (0, 255, 0), p1, p2, 3)
             # Debug Clase IA_Ptos
             else:
-                # Gradiente de utilidad sobre las bolitas candidatas (rojo = peor, verde = mejor)
-                for bolita, t in self.controlador.utilidad_debug:
-                    r     = int(255 * (1 - t))
-                    g     = int(255 * t)
-                    radio = 3 + int(4 * t)  # Las mejores opciones se dibujan más grandes
-                    pygame.draw.circle(interfaz, (r, g, 0), bolita.center, radio)
+                # # Gradiente de utilidad sobre las bolitas candidatas (rojo = peor, verde = mejor)
+                # for bolita, t in self.controlador.utilidad_debug:
+                #     r     = int(255 * (1 - t))
+                #     g     = int(255 * t)
+                #     radio = 3 + int(4 * t)  # Las mejores opciones se dibujan más grandes
+                #     pygame.draw.circle(interfaz, (r, g, 0), bolita.center, radio)
 
                 # Radios de decisión alrededor de Pac-Man
                 # Verde claro: radio de búsqueda de bolita_optima
                 # Azul claro: radio de activación de super-bolita
                 # Rojo: radio de caza
-                pygame.draw.circle(interfaz, (100, 255, 100), self.forma.center, constantes.radio_bolita_optima, 1)
-                pygame.draw.circle(interfaz, (100, 200, 255), self.forma.center, constantes.radio_super, 1)
-                pygame.draw.circle(interfaz, (250, 0, 0), self.forma.center, constantes.radio_caza, 1)
+                pygame.draw.circle(interfaz, (0, 220, 0), self.forma.center, constantes.radio_bolita_optima, 3)
+                pygame.draw.circle(interfaz, (0, 120, 255), self.forma.center, constantes.radio_super, 3)
+                pygame.draw.circle(interfaz, (250, 0, 0), self.forma.center, constantes.radio_caza, 3)
                 # Objetivo actual marcado en verde
                 meta = self.controlador.meta_bolita_debug
                 if meta:
@@ -151,7 +151,7 @@ class Pacman(EnteFisico):
                 # Indicamos el modo acivo
                 modo = self.controlador.modo_elegido_debug
                 if modo:
-                    colores_modo = {"Caza": (255, 80, 80), "Sb":(255, 200, 50), "Bolitas": (80, 220, 120)}
+                    colores_modo = {"Caza": (255, 80, 80), "Super-bolita":(51, 153, 255), "Bolitas": (80, 220, 120)}
                     color  = colores_modo.get(modo, (200, 200, 200))
                     texto  = self.fuente_debug.render(modo, True, color)
                     fondo  = pygame.Surface((texto.get_width() + 10, texto.get_height() + 6), pygame.SRCALPHA)
