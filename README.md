@@ -1,7 +1,4 @@
 
-
-https://github.com/user-attachments/assets/b4eea484-bfa1-4d63-aed0-dba56335e054
-
 # TFG -  Diseño de agentes inteligentes para la construcción del juego de Pac-Man
 
 Implementación del juego de Pac-Man en Python con Pygame.
@@ -101,3 +98,6 @@ Al inicio de la ejecución pedirá fijar valores para la simulación o de la con
 - La velocidad (`velocidad = 2 px/frame`) debe ser obligatoriamente un divisor del tamaño de celda (20 px) para que los giros cuadren con la cuadrícula.
 - Para cambiar los radios del modo **Barrido** se deben cambiar en el archivo main al hacer la llamada a la función `barrido_radio()` antes de la ejecución del código.
 - Hay incluido una carpeta con archivos CSV y PNG donde guardan los archivos que referencian los resultados expuestos en la memoria del TFG. Para mantenerlos organizados puedes incluir la carpeta en el nombre al ejecutar una simulación: `resultados_TFG/simulacion.csv`.
+
+
+https://github.com/user-attachments/assets/b4eea484-bfa1-4d63-aed0-dba56335e054
